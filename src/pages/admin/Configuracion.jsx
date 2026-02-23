@@ -101,8 +101,11 @@ export default function Configuracion() {
     if (!logoFile || !restaurant) return
     setUploadingLogo(true)
     try {
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) throw new Error('Sin sesión activa')
+
       const ext = logoFile.name.split('.').pop()
-      const path = `${restaurant.id}/logo.${ext}`
+      const path = `${user.id}/logo.${ext}`
       const { error: uploadError } = await supabase.storage
         .from('logos')
         .upload(path, logoFile, { upsert: true })
