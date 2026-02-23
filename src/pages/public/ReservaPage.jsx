@@ -196,9 +196,9 @@ function SlotsStep({ restaurant, settings, date, onSelect, onBack }) {
     setLoading(true)
     try {
       const rawSlots = generateSlots(
-        settings.open_time ?? '12:00',
-        settings.close_time ?? '23:00',
-        settings.slot_interval ?? 30
+        settings?.open_time ?? '12:00',
+        settings?.close_time ?? '23:00',
+        settings?.slot_interval ?? 30
       )
       setSlots(rawSlots)
 
@@ -566,30 +566,38 @@ export default function ReservaPage() {
           <p className="text-sm text-gray-400 mt-0.5">Reserva tu mesa</p>
         </div>
 
-        <Stepper step={step} />
+        {!settings ? (
+          <p className="text-center text-sm text-gray-400 py-6">
+            Este restaurante aún no tiene su horario configurado.<br />Vuelve más tarde.
+          </p>
+        ) : (
+          <>
+            <Stepper step={step} />
 
-        {step === 1 && (
-          <CalendarStep
-            settings={settings}
-            onSelect={date => { setSelectedDate(date); setStep(2) }}
-          />
-        )}
-        {step === 2 && (
-          <SlotsStep
-            restaurant={restaurant}
-            settings={settings}
-            date={selectedDate}
-            onSelect={time => { setSelectedTime(time); setStep(3) }}
-            onBack={() => setStep(1)}
-          />
-        )}
-        {step === 3 && (
-          <CustomerForm
-            restaurant={restaurant}
-            date={selectedDate}
-            time={selectedTime}
-            onBack={() => setStep(2)}
-          />
+            {step === 1 && (
+              <CalendarStep
+                settings={settings}
+                onSelect={date => { setSelectedDate(date); setStep(2) }}
+              />
+            )}
+            {step === 2 && (
+              <SlotsStep
+                restaurant={restaurant}
+                settings={settings}
+                date={selectedDate}
+                onSelect={time => { setSelectedTime(time); setStep(3) }}
+                onBack={() => setStep(1)}
+              />
+            )}
+            {step === 3 && (
+              <CustomerForm
+                restaurant={restaurant}
+                date={selectedDate}
+                time={selectedTime}
+                onBack={() => setStep(2)}
+              />
+            )}
+          </>
         )}
       </div>
     </div>
