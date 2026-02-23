@@ -75,7 +75,7 @@ export default function Reservas() {
     <>
       <Toast toast={toast} />
 
-      <div className="p-8">
+      <div className="p-4 sm:p-8">
         <h2 className="text-2xl font-semibold text-white mb-1">Reservas</h2>
         <p className="text-gray-500 text-sm mb-6">{restaurant?.name}</p>
 

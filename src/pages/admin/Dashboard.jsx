@@ -83,7 +83,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       <h2 className="text-2xl font-semibold text-white mb-1">Dashboard</h2>
       <p className="text-gray-500 text-sm">
         {restaurant?.name ?? 'Tu restaurante'} · {format(new Date(), "d 'de' MMMM yyyy", { locale: es })}
@@ -113,8 +113,8 @@ export default function Dashboard() {
         ) : todayReservations.length === 0 ? (
           <p className="text-gray-600 text-sm">Sin reservas para hoy.</p>
         ) : (
-          <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-            <table className="w-full text-sm">
+          <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-x-auto">
+            <table className="w-full text-sm min-w-[480px]">
               <thead>
                 <tr className="text-gray-500 text-xs uppercase tracking-wider border-b border-gray-800">
                   <th className="px-4 py-3 text-left">Hora</th>

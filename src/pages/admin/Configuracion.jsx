@@ -348,7 +348,7 @@ export default function Configuracion() {
     <>
       <Toast toast={toast} />
 
-      <div className="p-8 max-w-2xl space-y-8">
+      <div className="p-4 sm:p-8 max-w-2xl space-y-8">
         <div>
           <h2 className="text-2xl font-semibold text-white mb-1">Configuración</h2>
           <p className="text-gray-500 text-sm">Ajusta los datos de tu restaurante.</p>
@@ -479,7 +479,8 @@ export default function Configuracion() {
           {loadingTables ? (
             <p className="text-gray-500 text-sm">Cargando mesas...</p>
           ) : (
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[360px]">
               <thead>
                 <tr className="text-gray-500 text-xs uppercase tracking-wider border-b border-gray-800">
                   <th className="pb-2 text-left">Número</th>
@@ -528,6 +529,7 @@ export default function Configuracion() {
                 )}
               </tbody>
             </table>
+            </div>
           )}
 
           <div className="flex gap-2 mt-4">
