@@ -113,7 +113,7 @@ export default function Configuracion() {
 
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('logos')
-        .upload(filePath, logoFile, { upsert: true })
+        .upload(filePath, logoFile)
 
       console.log('[uploadLogo] upload result:', { uploadData, uploadError })
 
