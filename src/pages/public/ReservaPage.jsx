@@ -41,27 +41,6 @@ function generateSlots(openTime, closeTime, intervalMin) {
   return slots
 }
 
-async function checkSlotAvailability(restaurantId, date, time) {
-  const [{ count: tableCount }, { count: reservationCount }] = await Promise.all([
-    supabase
-      .from('tables')
-      .select('*', { count: 'exact', head: true })
-      .eq('restaurant_id', restaurantId)
-      .eq('is_active', true),
-    supabase
-      .from('reservations')
-      .select('*', { count: 'exact', head: true })
-      .eq('restaurant_id', restaurantId)
-      .eq('date', date)
-      .eq('time', time)
-      .neq('status', 'cancelled'),
-  ])
-  return {
-    available: (reservationCount ?? 0) < (tableCount ?? 0),
-    tableCount: tableCount ?? 0,
-    reservationCount: reservationCount ?? 0,
-  }
-}
 
 // ─── Stepper ─────────────────────────────────────────────────────────────────
 
@@ -214,22 +193,49 @@ function SlotsStep({ restaurant, settings, date, onSelect, onBack }) {
 
   async function loadSlots() {
     setLoading(true)
-    const rawSlots = generateSlots(
-      settings.open_time ?? '12:00',
-      settings.close_time ?? '23:00',
-      settings.slot_interval ?? 30
-    )
-    setSlots(rawSlots)
+    try {
+      const rawSlots = generateSlots(
+        settings.open_time ?? '12:00',
+        settings.close_time ?? '23:00',
+        settings.slot_interval ?? 30
+      )
+      setSlots(rawSlots)
 
-    const dateStr = format(date, 'yyyy-MM-dd')
-    const avail = {}
-    await Promise.all(
-      rawSlots.map(async time => {
-        avail[time] = await checkSlotAvailability(restaurant.id, dateStr, time + ':00')
-      })
-    )
-    setAvailability(avail)
-    setLoading(false)
+      const dateStr = format(date, 'yyyy-MM-dd')
+
+      // 2 queries total instead of 2×N
+      const [{ count: tableCount }, { data: booked }] = await Promise.all([
+        supabase
+          .from('tables')
+          .select('*', { count: 'exact', head: true })
+          .eq('restaurant_id', restaurant.id)
+          .eq('is_active', true),
+        supabase
+          .from('reservations')
+          .select('time')
+          .eq('restaurant_id', restaurant.id)
+          .eq('date', dateStr)
+          .neq('status', 'cancelled'),
+      ])
+
+      // Count reservations per slot locally
+      const countByTime = {}
+      for (const r of booked ?? []) {
+        countByTime[r.time] = (countByTime[r.time] ?? 0) + 1
+      }
+
+      const total = tableCount ?? 0
+      const avail = {}
+      for (const time of rawSlots) {
+        const reserved = countByTime[time + ':00'] ?? 0
+        avail[time] = { available: reserved < total, tableCount: total, reservationCount: reserved }
+      }
+      setAvailability(avail)
+    } catch (err) {
+      console.error('[loadSlots]', err)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
