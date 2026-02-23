@@ -104,26 +104,39 @@ export default function Configuracion() {
       const { data: { user }, error: authError } = await supabase.auth.getUser()
       if (authError || !user) throw new Error('Sin sesión activa')
 
-      const ext = logoFile.name.split('.').pop()
-      const path = `${user.id}/logo.${ext}`
-      const { error: uploadError } = await supabase.storage
-        .from('logos')
-        .upload(path, logoFile, { upsert: true })
-      if (uploadError) throw new Error(uploadError.message)
+      console.log('[uploadLogo] user.id:', user.id)
 
-      const { data: { publicUrl } } = supabase.storage.from('logos').getPublicUrl(path)
+      const ext = logoFile.name.split('.').pop().toLowerCase()
+      const filePath = `${user.id}/logo-${Date.now()}.${ext}`
+
+      console.log('[uploadLogo] uploading to path:', filePath)
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('logos')
+        .upload(filePath, logoFile, { upsert: true })
+
+      console.log('[uploadLogo] upload result:', { uploadData, uploadError })
+
+      if (uploadError) throw new Error(`Storage: ${uploadError.message} (${JSON.stringify(uploadError)})`)
+
+      const { data: { publicUrl } } = supabase.storage.from('logos').getPublicUrl(filePath)
+      console.log('[uploadLogo] publicUrl:', publicUrl)
 
       const { error: updateError } = await supabase
         .from('restaurants')
         .update({ logo_url: publicUrl })
         .eq('id', restaurant.id)
-      if (updateError) throw new Error(updateError.message)
+
+      console.log('[uploadLogo] update restaurants error:', updateError)
+
+      if (updateError) throw new Error(`DB: ${updateError.message}`)
 
       setLogoFile(null)
       setLogoPreview(null)
       await refetch()
       showToast('success', 'Logo actualizado correctamente')
     } catch (err) {
+      console.error('[uploadLogo] error completo:', err)
       showToast('error', err.message)
     } finally {
       setUploadingLogo(false)
