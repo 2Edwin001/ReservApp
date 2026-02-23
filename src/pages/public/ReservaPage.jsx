@@ -6,7 +6,7 @@ import {
   getDay, addMonths, isBefore, startOfDay, isSameDay,
 } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Loader2, UtensilsCrossed } from 'lucide-react'
 
 // ─── email ────────────────────────────────────────────────────────────────────
 // Uses the Supabase Edge Function `send-email` which calls Resend server-side.
@@ -537,6 +537,19 @@ export default function ReservaPage() {
     <div className="min-h-screen bg-gray-50 flex items-start justify-center px-4 py-12">
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 w-full max-w-md p-6">
         <div className="text-center mb-6">
+          <div className="flex justify-center mb-3">
+            {restaurant.logo_url ? (
+              <img
+                src={restaurant.logo_url}
+                alt={restaurant.name}
+                className="h-16 w-auto max-w-[140px] object-contain"
+              />
+            ) : (
+              <div className="w-14 h-14 rounded-xl bg-gray-100 flex items-center justify-center">
+                <UtensilsCrossed className="w-7 h-7 text-gray-400" />
+              </div>
+            )}
+          </div>
           <h1 className="text-xl font-semibold text-gray-900">{restaurant.name}</h1>
           <p className="text-sm text-gray-400 mt-0.5">Reserva tu mesa</p>
         </div>

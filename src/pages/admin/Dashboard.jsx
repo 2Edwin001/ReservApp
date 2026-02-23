@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { useRestaurant } from '../../hooks/useRestaurant'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Copy, Check, ExternalLink } from 'lucide-react'
 
 const STATUS_LABELS = {
   confirmed: { label: 'Confirmada', cls: 'bg-indigo-500/10 text-indigo-400' },
@@ -96,6 +96,9 @@ export default function Dashboard() {
         <StatCard label="Pendientes (confirmadas)" value={loadingData ? '—' : stats.confirmed} />
       </div>
 
+      {/* Reservation link */}
+      {restaurant?.slug && <ReservationLink restaurant={restaurant} />}
+
       {/* Today's reservations */}
       <div className="mt-8">
         <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">
@@ -150,6 +153,50 @@ function StatCard({ label, value }) {
     <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
       <p className="text-xs text-gray-500 uppercase tracking-wider">{label}</p>
       <p className="text-3xl font-bold text-white mt-2">{value}</p>
+    </div>
+  )
+}
+
+function ReservationLink({ restaurant }) {
+  const [copied, setCopied] = useState(false)
+  const url = `${window.location.origin}/r/${restaurant.slug}`
+
+  function copyLink() {
+    navigator.clipboard.writeText(url)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mt-6">
+      <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-3">
+        Link de reservas
+      </h3>
+      <div className="flex items-center gap-2">
+        <div className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-300 truncate select-all">
+          {url}
+        </div>
+        <button
+          onClick={copyLink}
+          className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors shrink-0 ${
+            copied
+              ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+              : 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700'
+          }`}
+        >
+          {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+          {copied ? 'Copiado' : 'Copiar'}
+        </button>
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 border border-indigo-500/20 transition-colors shrink-0"
+        >
+          <ExternalLink className="w-4 h-4" />
+          Abrir
+        </a>
+      </div>
     </div>
   )
 }

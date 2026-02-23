@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useRestaurant } from '../../hooks/useRestaurant'
 import { Toast, useToast } from '../../components/admin/Toast'
-import { Plus, Trash2, Save, Loader2 } from 'lucide-react'
+import { Plus, Trash2, Save, Loader2, ImagePlus, X } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 
@@ -29,6 +29,11 @@ export default function Configuracion() {
   const [name, setName] = useState('')
   const [slug, setSlug] = useState('')
   const [savingInfo, setSavingInfo] = useState(false)
+
+  // Logo
+  const [logoFile, setLogoFile] = useState(null)
+  const [logoPreview, setLogoPreview] = useState(null)
+  const [uploadingLogo, setUploadingLogo] = useState(false)
 
   // Horarios
   const [openTime, setOpenTime] = useState('12:00')
@@ -82,6 +87,61 @@ export default function Configuracion() {
     if (error) console.error('[loadTables]', error)
     setTables(data ?? [])
     setLoadingTables(false)
+  }
+
+  // ── Logo ──
+  function handleLogoFileChange(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setLogoFile(file)
+    setLogoPreview(URL.createObjectURL(file))
+  }
+
+  async function uploadLogo() {
+    if (!logoFile || !restaurant) return
+    setUploadingLogo(true)
+    try {
+      const ext = logoFile.name.split('.').pop()
+      const path = `${restaurant.id}/logo.${ext}`
+      const { error: uploadError } = await supabase.storage
+        .from('logos')
+        .upload(path, logoFile, { upsert: true })
+      if (uploadError) throw new Error(uploadError.message)
+
+      const { data: { publicUrl } } = supabase.storage.from('logos').getPublicUrl(path)
+
+      const { error: updateError } = await supabase
+        .from('restaurants')
+        .update({ logo_url: publicUrl })
+        .eq('id', restaurant.id)
+      if (updateError) throw new Error(updateError.message)
+
+      setLogoFile(null)
+      setLogoPreview(null)
+      await refetch()
+      showToast('success', 'Logo actualizado correctamente')
+    } catch (err) {
+      showToast('error', err.message)
+    } finally {
+      setUploadingLogo(false)
+    }
+  }
+
+  async function deleteLogo() {
+    if (!restaurant?.logo_url) return
+    try {
+      const path = restaurant.logo_url.split('/logos/')[1]
+      await supabase.storage.from('logos').remove([path])
+      const { error } = await supabase
+        .from('restaurants')
+        .update({ logo_url: null })
+        .eq('id', restaurant.id)
+      if (error) throw new Error(error.message)
+      await refetch()
+      showToast('success', 'Logo eliminado')
+    } catch (err) {
+      showToast('error', err.message)
+    }
   }
 
   // ── Name → slug ──
@@ -290,6 +350,59 @@ export default function Configuracion() {
 
         {/* ── Info General ── */}
         <Section title="Información general">
+          <Label>Logo del restaurante</Label>
+          <div className="flex items-center gap-4 mb-5">
+            <div className="w-16 h-16 rounded-xl bg-gray-800 border border-gray-700 flex items-center justify-center overflow-hidden shrink-0">
+              {logoPreview || restaurant?.logo_url ? (
+                <img
+                  src={logoPreview ?? restaurant.logo_url}
+                  alt="Logo"
+                  className="w-full h-full object-contain"
+                />
+              ) : (
+                <ImagePlus className="w-6 h-6 text-gray-600" />
+              )}
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 bg-gray-800 border border-gray-700 text-gray-300 hover:bg-gray-700 text-sm rounded-lg transition-colors">
+                <ImagePlus className="w-4 h-4" />
+                {restaurant?.logo_url ? 'Cambiar logo' : 'Subir logo'}
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleLogoFileChange}
+                />
+              </label>
+              {restaurant?.logo_url && !logoFile && (
+                <button
+                  onClick={deleteLogo}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                  Eliminar
+                </button>
+              )}
+            </div>
+          </div>
+          {logoFile && (
+            <div className="flex gap-2 mb-5">
+              <button
+                onClick={uploadLogo}
+                disabled={uploadingLogo}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 text-white text-sm rounded-lg transition-colors"
+              >
+                {uploadingLogo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                Guardar logo
+              </button>
+              <button
+                onClick={() => { setLogoFile(null); setLogoPreview(null) }}
+                className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-300 transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
+          )}
           <Label>Nombre del restaurante</Label>
           <input
             value={name}
