@@ -184,6 +184,7 @@ function CalendarStep({ settings, onSelect }) {
 function SlotsStep({ restaurant, settings, date, onSelect, onBack }) {
   const [slots, setSlots] = useState([])
   const [availability, setAvailability] = useState({})
+  const [tableCount, setTableCount] = useState(null)
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(null)
 
@@ -225,6 +226,7 @@ function SlotsStep({ restaurant, settings, date, onSelect, onBack }) {
       }
 
       const total = tableCount ?? 0
+      setTableCount(total)
       const avail = {}
       for (const time of rawSlots) {
         const reserved = countByTime[time + ':00'] ?? 0
@@ -249,6 +251,10 @@ function SlotsStep({ restaurant, settings, date, onSelect, onBack }) {
           <Loader2 className="w-5 h-5 animate-spin" />
           Consultando disponibilidad...
         </div>
+      ) : tableCount === 0 ? (
+        <p className="text-center text-sm text-gray-400 py-8">
+          Este restaurante no tiene mesas disponibles por el momento.
+        </p>
       ) : (
         <div className="grid grid-cols-3 gap-2">
           {slots.map(time => {
