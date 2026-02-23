@@ -324,13 +324,6 @@ function CustomerForm({ restaurant, date, time, onBack }) {
       const dateStr = format(date, 'yyyy-MM-dd')
       const timeStr = time + ':00'
 
-      console.log('[createReservation] iniciando', {
-        restaurant_id: restaurant.id,
-        date: dateStr,
-        time: timeStr,
-        people: form.people,
-      })
-
       // ── Find an available table to assign ──────────────────────────────────
       const [
         { data: activeTables, error: tablesErr },
@@ -338,7 +331,7 @@ function CustomerForm({ restaurant, date, time, onBack }) {
       ] = await Promise.all([
         supabase
           .from('tables')
-          .select('id')
+          .select('id, capacity')
           .eq('restaurant_id', restaurant.id)
           .eq('is_active', true),
         supabase
@@ -350,17 +343,22 @@ function CustomerForm({ restaurant, date, time, onBack }) {
           .neq('status', 'cancelled'),
       ])
 
-      if (tablesErr) { console.error('[createReservation] tablesErr:', tablesErr); throw tablesErr }
-      if (bookedErr) { console.error('[createReservation] bookedErr:', bookedErr); throw bookedErr }
+      if (tablesErr) throw tablesErr
+      if (bookedErr) throw bookedErr
 
       const bookedIds = new Set((booked ?? []).map(r => r.table_id))
-      const freeTable = (activeTables ?? []).find(t => !bookedIds.has(t.id))
-
-      console.log('[createReservation] mesas activas:', activeTables?.length ?? 0,
-        '| reservadas:', bookedIds.size, '| libre:', freeTable?.id ?? 'ninguna')
+      const freeTables = (activeTables ?? []).filter(t => !bookedIds.has(t.id))
+      const freeTable = freeTables.find(t => t.capacity >= form.people)
 
       if (!freeTable) {
-        setError('No hay mesas disponibles para este horario. Elige otro.')
+        const maxAvailable = freeTables.length > 0
+          ? Math.max(...freeTables.map(t => t.capacity))
+          : 0
+        setError(
+          freeTables.length === 0
+            ? 'No hay mesas disponibles para este horario. Elige otro.'
+            : `No hay mesas con capacidad para ${form.people} personas. El máximo disponible es ${maxAvailable}.`
+        )
         setSubmitting(false)
         return
       }
@@ -378,15 +376,11 @@ function CustomerForm({ restaurant, date, time, onBack }) {
       }
       if (form.phone) payload.client_phone = form.phone
 
-      console.log('[createReservation] payload:', payload)
-
       const { data, error: insertErr } = await supabase
         .from('reservations')
         .insert(payload)
         .select()
         .single()
-
-      console.log('[createReservation] respuesta Supabase:', { data, error: insertErr })
 
       if (insertErr) throw insertErr
 
