@@ -2,28 +2,36 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useRestaurant } from '../../hooks/useRestaurant'
 import { Toast, useToast } from '../../components/admin/Toast'
-import { Plus, Trash2, Save, Loader2, ImagePlus, X } from 'lucide-react'
+import { Plus, Trash2, Save, Loader2, ImagePlus, X, Store, Clock, LayoutGrid, CalendarX } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 
 const DAYS = [
-  { value: 1, label: 'Lu' },
-  { value: 2, label: 'Ma' },
-  { value: 3, label: 'Mi' },
-  { value: 4, label: 'Ju' },
-  { value: 5, label: 'Vi' },
-  { value: 6, label: 'Sá' },
-  { value: 0, label: 'Do' },
+  { value: 1, label: 'Lu', full: 'Lunes' },
+  { value: 2, label: 'Ma', full: 'Martes' },
+  { value: 3, label: 'Mi', full: 'Miércoles' },
+  { value: 4, label: 'Ju', full: 'Jueves' },
+  { value: 5, label: 'Vi', full: 'Viernes' },
+  { value: 6, label: 'Sá', full: 'Sábado' },
+  { value: 0, label: 'Do', full: 'Domingo' },
 ]
 
 const CAPACITIES = [2, 4, 6, 8]
+
+const TABS = [
+  { id: 'info',       label: 'Información general', icon: Store },
+  { id: 'horarios',   label: 'Horarios',             icon: Clock },
+  { id: 'mesas',      label: 'Mesas',                icon: LayoutGrid },
+  { id: 'bloqueados', label: 'Días bloqueados',       icon: CalendarX },
+]
 
 export default function Configuracion() {
   useEffect(() => { document.title = 'Configuración · ReservApp' }, [])
 
   const { restaurant, settings, loading, refetch } = useRestaurant()
-
   const { toast, show: showToast } = useToast()
+
+  const [activeTab, setActiveTab] = useState('info')
 
   // Info General
   const [name, setName] = useState('')
@@ -166,16 +174,11 @@ export default function Configuracion() {
 
       console.log('[saveInfo] user.id =', user.id)
 
-      // Warmup select — fuerza que el cliente resuelva el schema antes del upsert.
-      // NOTA: el schema cache del servidor solo se recarga desde el dashboard
-      // (Project Settings → API → Reload Schema) o con: NOTIFY pgrst, 'reload schema'
       const { error: schemaError } = await supabase.from('restaurants').select('id').limit(1)
       if (schemaError) {
         console.warn('[saveInfo] warmup select error:', schemaError.message)
-        // No abortamos — el error de schema se verá en el upsert con mejor contexto
       }
 
-      // Build payload — omit id when undefined to avoid upsert conflict issues
       const payload = { user_id: user.id, name, slug }
       if (restaurant?.id) payload.id = restaurant.id
 
@@ -210,7 +213,6 @@ export default function Configuracion() {
     }
     setSavingHours(true)
     try {
-      // Build payload — omit id when undefined
       const payload = {
         restaurant_id: restaurant.id,
         open_time: openTime,
@@ -273,7 +275,6 @@ export default function Configuracion() {
   }
 
   async function deleteTable(id) {
-    // Check for associated reservations before attempting delete
     const { count, error: checkError } = await supabase
       .from('reservations')
       .select('*', { count: 'exact', head: true })
@@ -337,9 +338,11 @@ export default function Configuracion() {
   // ── Render ──
   if (loading) {
     return (
-      <div className="p-8 flex items-center gap-3 text-gray-400">
-        <Loader2 className="w-5 h-5 animate-spin" />
-        Cargando configuración...
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+          <span className="text-sm text-gray-400">Cargando configuración...</span>
+        </div>
       </div>
     )
   }
@@ -348,260 +351,366 @@ export default function Configuracion() {
     <>
       <Toast toast={toast} />
 
-      <div className="p-4 sm:p-8 max-w-2xl space-y-8">
-        <div>
-          <h2 className="text-2xl font-semibold text-white mb-1">Configuración</h2>
-          <p className="text-gray-500 text-sm">Ajusta los datos de tu restaurante.</p>
+      <div className="p-6 md:p-10">
+
+        {/* ── Page header ── */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Configuración</h2>
+          <p className="text-gray-500 text-sm mt-1">Ajusta los datos de tu restaurante.</p>
         </div>
 
-        {/* ── Info General ── */}
-        <Section title="Información general">
-          <Label>Logo del restaurante</Label>
-          <div className="flex items-center gap-4 mb-5">
-            <div className="w-16 h-16 rounded-xl bg-gray-800 border border-gray-700 flex items-center justify-center overflow-hidden shrink-0">
-              {logoPreview || restaurant?.logo_url ? (
-                <img
-                  src={logoPreview ?? restaurant.logo_url}
-                  alt="Logo"
-                  className="w-full h-full object-contain"
-                />
-              ) : (
-                <ImagePlus className="w-6 h-6 text-gray-600" />
-              )}
-            </div>
-            <div className="flex flex-col gap-2">
-              <label className="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 bg-gray-800 border border-gray-700 text-gray-300 hover:bg-gray-700 text-sm rounded-lg transition-colors">
-                <ImagePlus className="w-4 h-4" />
-                {restaurant?.logo_url ? 'Cambiar logo' : 'Subir logo'}
+        {/* ── Tab navigation ── */}
+        <div className="flex gap-1 p-1 bg-white border border-gray-200 rounded-xl mb-8 shadow-sm">
+          {TABS.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              onClick={() => setActiveTab(id)}
+              className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all flex-1 ${
+                activeTab === id
+                  ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/20'
+                  : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+              }`}
+            >
+              <Icon className="w-4 h-4 shrink-0" />
+              <span className="hidden sm:inline">{label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* ── Información general ── */}
+        {activeTab === 'info' && (
+          <Section title="Información general" icon={Store}>
+            <div className="space-y-6">
+
+              {/* Logo */}
+              <div>
+                <Label>Logo del restaurante</Label>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                  <div className="w-20 h-20 rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden shrink-0">
+                    {logoPreview || restaurant?.logo_url ? (
+                      <img
+                        src={logoPreview ?? restaurant.logo_url}
+                        alt="Logo"
+                        className="w-full h-full object-contain"
+                      />
+                    ) : (
+                      <ImagePlus className="w-7 h-7 text-gray-300" />
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <p className="text-sm text-gray-700 font-medium">
+                      {restaurant?.name || 'Tu restaurante'}
+                    </p>
+                    <div className="flex items-center flex-wrap gap-2">
+                      <label className="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 text-gray-600 hover:bg-gray-100 text-xs font-medium rounded-lg transition-colors">
+                        <ImagePlus className="w-3.5 h-3.5" />
+                        {restaurant?.logo_url ? 'Cambiar logo' : 'Subir logo'}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleLogoFileChange}
+                        />
+                      </label>
+                      {restaurant?.logo_url && !logoFile && (
+                        <button
+                          onClick={deleteLogo}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-red-500 hover:bg-red-50 border border-red-100 rounded-lg transition-colors"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                          Eliminar
+                        </button>
+                      )}
+                    </div>
+                    {logoFile && (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={uploadLogo}
+                          disabled={uploadingLogo}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 text-white text-xs font-medium rounded-lg transition-colors"
+                        >
+                          {uploadingLogo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                          Guardar logo
+                        </button>
+                        <button
+                          onClick={() => { setLogoFile(null); setLogoPreview(null) }}
+                          className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg transition-colors"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Name */}
+              <div>
+                <Label>Nombre del restaurante</Label>
                 <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleLogoFileChange}
+                  value={name}
+                  onChange={e => handleNameChange(e.target.value)}
+                  placeholder="Mi Restaurante"
+                  className="input w-full"
                 />
-              </label>
-              {restaurant?.logo_url && !logoFile && (
-                <button
-                  onClick={deleteLogo}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+              </div>
+
+              {/* Slug */}
+              <div>
+                <Label>URL pública</Label>
+                <div className="flex items-center bg-white border border-gray-200 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500 transition-all">
+                  <span className="px-3 text-gray-400 text-sm border-r border-gray-200 py-2 select-none bg-gray-50">/r/</span>
+                  <input
+                    value={slug}
+                    onChange={e => setSlug(e.target.value)}
+                    placeholder="mi-restaurante"
+                    className="flex-1 bg-transparent px-3 py-2 text-sm text-gray-900 focus:outline-none"
+                  />
+                </div>
+                <p className="text-xs text-gray-400 mt-1.5">
+                  Tus clientes accederán a través de esta URL.
+                </p>
+              </div>
+
+              <SaveButton onClick={saveInfo} loading={savingInfo} />
+            </div>
+          </Section>
+        )}
+
+        {/* ── Horarios y turnos ── */}
+        {activeTab === 'horarios' && (
+          <Section title="Horarios y turnos" icon={Clock}>
+            <div className="space-y-6">
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Apertura</Label>
+                  <input
+                    type="time"
+                    value={openTime}
+                    onChange={e => setOpenTime(e.target.value)}
+                    className="input w-full"
+                  />
+                </div>
+                <div>
+                  <Label>Cierre</Label>
+                  <input
+                    type="time"
+                    value={closeTime}
+                    onChange={e => setCloseTime(e.target.value)}
+                    className="input w-full"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label>Intervalo entre turnos</Label>
+                <select
+                  value={slotInterval}
+                  onChange={e => setSlotInterval(Number(e.target.value))}
+                  className="input w-full"
                 >
-                  <X className="w-4 h-4" />
-                  Eliminar
-                </button>
-              )}
-            </div>
-          </div>
-          {logoFile && (
-            <div className="flex gap-2 mb-5">
-              <button
-                onClick={uploadLogo}
-                disabled={uploadingLogo}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 text-white text-sm rounded-lg transition-colors"
-              >
-                {uploadingLogo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                Guardar logo
-              </button>
-              <button
-                onClick={() => { setLogoFile(null); setLogoPreview(null) }}
-                className="px-3 py-1.5 text-sm text-gray-500 hover:text-gray-300 transition-colors"
-              >
-                Cancelar
-              </button>
-            </div>
-          )}
-          <Label>Nombre del restaurante</Label>
-          <input
-            value={name}
-            onChange={e => handleNameChange(e.target.value)}
-            placeholder="Mi Restaurante"
-            className="input w-full"
-          />
-          <Label className="mt-4">Slug (URL pública)</Label>
-          <div className="flex items-center bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
-            <span className="px-3 text-gray-500 text-sm border-r border-gray-700 py-2">/r/</span>
-            <input
-              value={slug}
-              onChange={e => setSlug(e.target.value)}
-              placeholder="mi-restaurante"
-              className="flex-1 bg-transparent px-3 py-2 text-sm text-white focus:outline-none"
-            />
-          </div>
-          <SaveButton onClick={saveInfo} loading={savingInfo} className="mt-4" />
-        </Section>
+                  {[15, 30, 45, 60].map(v => (
+                    <option key={v} value={v}>{v} minutos</option>
+                  ))}
+                </select>
+              </div>
 
-        {/* ── Horarios ── */}
-        <Section title="Horarios y turnos">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>Apertura</Label>
-              <input type="time" value={openTime} onChange={e => setOpenTime(e.target.value)} className="input w-full" />
+              <div>
+                <Label>Días de apertura</Label>
+                <div className="flex gap-2 flex-wrap">
+                  {DAYS.map(({ value, label, full }) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => toggleDay(value)}
+                      title={full}
+                      className={`px-3.5 h-10 rounded-lg text-sm font-medium transition-all ${
+                        openDays.includes(value)
+                          ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/25'
+                          : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-900 border border-gray-200'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-400 mt-2">
+                  {openDays.length === 0
+                    ? 'Ningún día seleccionado.'
+                    : `${openDays.length} día${openDays.length === 1 ? '' : 's'} seleccionado${openDays.length === 1 ? '' : 's'}.`
+                  }
+                </p>
+              </div>
+
+              <SaveButton onClick={saveHours} loading={savingHours} />
             </div>
-            <div>
-              <Label>Cierre</Label>
-              <input type="time" value={closeTime} onChange={e => setCloseTime(e.target.value)} className="input w-full" />
-            </div>
-          </div>
-
-          <Label className="mt-4">Intervalo entre turnos</Label>
-          <select
-            value={slotInterval}
-            onChange={e => setSlotInterval(Number(e.target.value))}
-            className="input w-full"
-          >
-            {[15, 30, 45, 60].map(v => (
-              <option key={v} value={v}>{v} minutos</option>
-            ))}
-          </select>
-
-          <Label className="mt-4">Días de apertura</Label>
-          <div className="flex gap-2 flex-wrap">
-            {DAYS.map(({ value, label }) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => toggleDay(value)}
-                className={`w-10 h-10 rounded-lg text-sm font-medium transition-colors ${
-                  openDays.includes(value)
-                    ? 'bg-indigo-500 text-white'
-                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-
-          <SaveButton onClick={saveHours} loading={savingHours} className="mt-4" />
-        </Section>
+          </Section>
+        )}
 
         {/* ── Mesas ── */}
-        <Section title="Mesas">
-          {loadingTables ? (
-            <p className="text-gray-500 text-sm">Cargando mesas...</p>
-          ) : (
-            <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[360px]">
-              <thead>
-                <tr className="text-gray-500 text-xs uppercase tracking-wider border-b border-gray-800">
-                  <th className="pb-2 text-left">Número</th>
-                  <th className="pb-2 text-left">Capacidad</th>
-                  <th className="pb-2 text-left">Estado</th>
-                  <th className="pb-2" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-800">
-                {tables.map(t => (
-                  <tr key={t.id}>
-                    <td className="py-2.5 text-white">Mesa {t.number}</td>
-                    <td className="py-2.5">
-                      <span className="px-2 py-0.5 rounded-full bg-gray-800 text-gray-300 text-xs">
-                        {t.capacity} personas
-                      </span>
-                    </td>
-                    <td className="py-2.5">
-                      <button
-                        onClick={() => toggleTableActive(t)}
-                        className={`text-xs px-2 py-0.5 rounded-full transition-colors ${
-                          t.is_active
-                            ? 'bg-green-500/10 text-green-400'
-                            : 'bg-gray-800 text-gray-500'
-                        }`}
-                      >
-                        {t.is_active ? 'Activa' : 'Inactiva'}
-                      </button>
-                    </td>
-                    <td className="py-2.5 text-right">
-                      <button
-                        onClick={() => deleteTable(t.id)}
-                        className="p-1.5 rounded text-gray-600 hover:text-red-400 hover:bg-red-400/10 transition-colors"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-                {tables.length === 0 && (
-                  <tr>
-                    <td colSpan={4} className="py-4 text-center text-gray-600 text-sm">
-                      Sin mesas configuradas
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-            </div>
-          )}
+        {activeTab === 'mesas' && (
+          <Section title="Mesas" icon={LayoutGrid}>
+            <div className="space-y-6">
+              {loadingTables ? (
+                <div className="flex items-center gap-2 text-gray-400 text-sm py-6">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Cargando mesas...
+                </div>
+              ) : tables.length > 0 ? (
+                <div className="overflow-x-auto rounded-xl border border-gray-200">
+                  <table className="w-full text-sm min-w-[360px]">
+                    <thead>
+                      <tr className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider border-b border-gray-100">
+                        <th className="px-4 py-3 text-left">Mesa</th>
+                        <th className="px-4 py-3 text-left">Capacidad</th>
+                        <th className="px-4 py-3 text-left">Estado</th>
+                        <th className="px-4 py-3" />
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 bg-white">
+                      {tables.map(t => (
+                        <tr key={t.id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-4 py-3 text-gray-900 font-medium">Mesa {t.number}</td>
+                          <td className="px-4 py-3">
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 text-xs border border-gray-200">
+                              {t.capacity} personas
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <button
+                              onClick={() => toggleTableActive(t)}
+                              className={`text-xs px-2.5 py-1 rounded-full font-medium transition-colors border ${
+                                t.is_active
+                                  ? 'bg-green-50 text-green-700 border-green-100 hover:bg-green-100'
+                                  : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200'
+                              }`}
+                            >
+                              {t.is_active ? 'Activa' : 'Inactiva'}
+                            </button>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <button
+                              onClick={() => deleteTable(t.id)}
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-12 rounded-xl border-2 border-dashed border-gray-200">
+                  <LayoutGrid className="w-9 h-9 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500 text-sm font-medium">Sin mesas configuradas</p>
+                  <p className="text-gray-400 text-xs mt-1">Agrega tu primera mesa para gestionar reservas.</p>
+                </div>
+              )}
 
-          <div className="flex gap-2 mt-4">
-            <input
-              type="number"
-              value={newTableNumber}
-              onChange={e => setNewTableNumber(e.target.value)}
-              placeholder="Nº mesa"
-              className="input w-24"
-              min={1}
-            />
-            <select
-              value={newTableCapacity}
-              onChange={e => setNewTableCapacity(Number(e.target.value))}
-              className="input flex-1"
-            >
-              {CAPACITIES.map(c => (
-                <option key={c} value={c}>{c} personas</option>
-              ))}
-            </select>
-            <button
-              onClick={addTable}
-              disabled={!newTableNumber}
-              className="flex items-center gap-1.5 px-4 py-2 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 text-white text-sm rounded-lg transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              Agregar
-            </button>
-          </div>
-        </Section>
+              <div>
+                <Label>Agregar nueva mesa</Label>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    value={newTableNumber}
+                    onChange={e => setNewTableNumber(e.target.value)}
+                    placeholder="Nº mesa"
+                    className="input w-24"
+                    min={1}
+                  />
+                  <select
+                    value={newTableCapacity}
+                    onChange={e => setNewTableCapacity(Number(e.target.value))}
+                    className="input flex-1"
+                  >
+                    {CAPACITIES.map(c => (
+                      <option key={c} value={c}>{c} personas</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={addTable}
+                    disabled={!newTableNumber}
+                    className="flex items-center gap-1.5 px-4 py-2 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-40 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Agregar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </Section>
+        )}
 
         {/* ── Días bloqueados ── */}
-        <Section title="Días bloqueados">
-          <div className="flex gap-2">
-            <input
-              type="date"
-              value={newBlockedDate}
-              onChange={e => setNewBlockedDate(e.target.value)}
-              className="input flex-1"
-            />
-            <button
-              onClick={addBlockedDate}
-              disabled={!newBlockedDate || savingBlocked}
-              className="flex items-center gap-1.5 px-4 py-2 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 text-white text-sm rounded-lg transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              Bloquear
-            </button>
-          </div>
+        {activeTab === 'bloqueados' && (
+          <Section title="Días bloqueados" icon={CalendarX}>
+            <div className="space-y-6">
 
-          {blockedDates.length > 0 && (
-            <ul className="mt-3 space-y-1.5">
-              {blockedDates.map(d => (
-                <li key={d} className="flex items-center justify-between bg-gray-800 rounded-lg px-3 py-2">
-                  <span className="text-sm text-gray-300">
-                    {format(parseISO(d), "d 'de' MMMM yyyy", { locale: es })}
-                  </span>
+              <div>
+                <Label>Bloquear una fecha</Label>
+                <div className="flex gap-2">
+                  <input
+                    type="date"
+                    value={newBlockedDate}
+                    onChange={e => setNewBlockedDate(e.target.value)}
+                    className="input flex-1"
+                  />
                   <button
-                    onClick={() => removeBlockedDate(d)}
-                    className="text-gray-600 hover:text-red-400 transition-colors ml-4"
-                    disabled={savingBlocked}
+                    onClick={addBlockedDate}
+                    disabled={!newBlockedDate || savingBlocked}
+                    className="flex items-center gap-1.5 px-4 py-2 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-40 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
                   >
-                    ×
+                    {savingBlocked ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                    Bloquear
                   </button>
-                </li>
-              ))}
-            </ul>
-          )}
-          {blockedDates.length === 0 && (
-            <p className="text-gray-600 text-sm mt-2">Sin días bloqueados.</p>
-          )}
-        </Section>
+                </div>
+                <p className="text-xs text-gray-400 mt-1.5">
+                  Los días bloqueados no estarán disponibles para nuevas reservas.
+                </p>
+              </div>
+
+              {blockedDates.length > 0 ? (
+                <div>
+                  <Label>Fechas bloqueadas ({blockedDates.length})</Label>
+                  <ul className="space-y-2">
+                    {blockedDates.map(d => (
+                      <li
+                        key={d}
+                        className="flex items-center justify-between bg-gray-50 border border-gray-100 rounded-xl px-4 py-3"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-8 h-8 rounded-lg bg-red-50 border border-red-100 flex items-center justify-center shrink-0">
+                            <CalendarX className="w-4 h-4 text-red-500" />
+                          </div>
+                          <span className="text-sm text-gray-700 capitalize truncate">
+                            {format(parseISO(d), "EEEE, d 'de' MMMM yyyy", { locale: es })}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => removeBlockedDate(d)}
+                          disabled={savingBlocked}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-40"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <div className="text-center py-12 rounded-xl border-2 border-dashed border-gray-200">
+                  <CalendarX className="w-9 h-9 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500 text-sm font-medium">Sin días bloqueados</p>
+                  <p className="text-gray-400 text-xs mt-1">Todos los días dentro del horario están disponibles.</p>
+                </div>
+              )}
+            </div>
+          </Section>
+        )}
+
       </div>
     </>
   )
@@ -609,18 +718,25 @@ export default function Configuracion() {
 
 // ─── sub-components ───────────────────────────────────────────────────────────
 
-function Section({ title, children }) {
+function Section({ title, icon: Icon, children }) {
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
-      <h3 className="text-sm font-semibold text-gray-300 uppercase tracking-wider mb-4">{title}</h3>
-      {children}
+    <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+      <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-100 bg-gray-50">
+        <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0">
+          <Icon className="w-4 h-4 text-indigo-600" />
+        </div>
+        <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
+      </div>
+      <div className="p-6">
+        {children}
+      </div>
     </div>
   )
 }
 
 function Label({ children, className = '' }) {
   return (
-    <label className={`block text-xs text-gray-500 mb-1.5 ${className}`}>{children}</label>
+    <label className={`block text-xs font-medium text-gray-500 mb-2 ${className}`}>{children}</label>
   )
 }
 
@@ -629,10 +745,10 @@ function SaveButton({ onClick, loading, className = '' }) {
     <button
       onClick={onClick}
       disabled={loading}
-      className={`flex items-center gap-2 px-4 py-2 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 text-white text-sm rounded-lg transition-colors ${className}`}
+      className={`flex items-center gap-2 px-5 py-2.5 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-all shadow-lg shadow-indigo-500/20 ${className}`}
     >
       {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-      Guardar
+      Guardar cambios
     </button>
   )
 }

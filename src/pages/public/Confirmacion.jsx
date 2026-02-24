@@ -1,19 +1,16 @@
 import { useParams, useLocation, useNavigate } from 'react-router-dom'
 import { useEffect } from 'react'
-import { CheckCircle, Calendar, Clock, Users, Hash } from 'lucide-react'
+import { CheckCircle, Calendar, Clock, Users, User, UtensilsCrossed } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 
 export default function Confirmacion() {
   const { slug } = useParams()
   const { state } = useLocation()
-  const navigate = useNavigate()
+  const navigate  = useNavigate()
 
-  // Redirect if accessed directly without booking state
   useEffect(() => {
-    if (!state?.reservation) {
-      navigate(`/r/${slug}`, { replace: true })
-    }
+    if (!state?.reservation) navigate(`/r/${slug}`, { replace: true })
   }, [state, slug, navigate])
 
   if (!state?.reservation) return null
@@ -21,52 +18,105 @@ export default function Confirmacion() {
   const { reservation, restaurant } = state
   const dateFormatted = format(parseISO(reservation.date), "EEEE d 'de' MMMM yyyy", { locale: es })
   const timeFormatted = reservation.time.slice(0, 5)
-  const code = reservation.id.slice(0, 8).toUpperCase()
+  const code          = reservation.id.slice(0, 8).toUpperCase()
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-12">
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 w-full max-w-md p-8 text-center">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-50 mb-4">
-          <CheckCircle className="w-8 h-8 text-green-500" />
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50/40 flex items-start justify-center px-4 py-12">
+      <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/80 border border-gray-100 w-full max-w-md overflow-hidden">
+
+        {/* Success header */}
+        <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 px-7 pt-8 pb-8 text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/20 mb-4">
+            <CheckCircle className="w-9 h-9 text-white" />
+          </div>
+          <h1 className="text-2xl font-bold text-white mb-1">¡Reserva confirmada!</h1>
+          <p className="text-indigo-200 text-sm">
+            Te esperamos en <span className="text-white font-semibold">{restaurant?.name ?? slug}</span>
+          </p>
         </div>
 
-        <h1 className="text-2xl font-semibold text-gray-900 mb-1">¡Reserva confirmada!</h1>
-        <p className="text-gray-500 text-sm mb-6">
-          Te esperamos en <span className="font-medium text-gray-700">{restaurant?.name ?? slug}</span>
-        </p>
+        <div className="px-7 py-7 space-y-5">
 
-        {/* Details */}
-        <div className="bg-gray-50 rounded-xl p-5 text-left space-y-3 mb-6">
-          <DetailRow icon={<Calendar className="w-4 h-4 text-indigo-400" />} label="Fecha" value={dateFormatted} />
-          <DetailRow icon={<Clock className="w-4 h-4 text-indigo-400" />} label="Hora" value={timeFormatted} />
-          <DetailRow icon={<Users className="w-4 h-4 text-indigo-400" />} label="Personas" value={reservation.people} />
-          <DetailRow icon={<Hash className="w-4 h-4 text-indigo-400" />} label="A nombre de" value={reservation.client_name} />
+          {/* Booking code */}
+          <div className="relative bg-indigo-50 rounded-2xl border border-indigo-100 overflow-hidden">
+            <div className="absolute -left-2 top-1/2 -translate-y-1/2 w-4 h-8 bg-white rounded-r-full border-r border-y border-indigo-100" />
+            <div className="absolute -right-2 top-1/2 -translate-y-1/2 w-4 h-8 bg-white rounded-l-full border-l border-y border-indigo-100" />
+            <div className="px-6 py-5 text-center">
+              <p className="text-xs font-semibold text-indigo-400 uppercase tracking-widest mb-2">
+                Código de reserva
+              </p>
+              <p className="text-3xl font-mono font-bold text-indigo-600 tracking-[0.25em]">
+                {code}
+              </p>
+            </div>
+          </div>
+
+          {/* Details */}
+          <div className="space-y-2">
+            <DetailRow
+              icon={Calendar}
+              color="indigo"
+              label="Fecha"
+              value={<span className="capitalize">{dateFormatted}</span>}
+            />
+            <DetailRow
+              icon={Clock}
+              color="purple"
+              label="Hora"
+              value={timeFormatted}
+            />
+            <DetailRow
+              icon={Users}
+              color="green"
+              label="Personas"
+              value={`${reservation.people} ${reservation.people === 1 ? 'persona' : 'personas'}`}
+            />
+            <DetailRow
+              icon={User}
+              color="orange"
+              label="A nombre de"
+              value={reservation.client_name}
+            />
+          </div>
+
+          {/* CTA */}
+          <button
+            onClick={() => navigate(`/r/${slug}`)}
+            className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl transition-all shadow-md shadow-indigo-100"
+          >
+            Hacer otra reserva
+          </button>
         </div>
 
-        {/* Booking code */}
-        <div className="border border-dashed border-indigo-200 rounded-xl p-4 mb-6">
-          <p className="text-xs text-gray-400 mb-1">Código de reserva</p>
-          <p className="text-2xl font-mono font-bold text-indigo-600 tracking-widest">{code}</p>
+        {/* Footer attribution */}
+        <div className="pb-5 text-center">
+          <p className="text-xs text-gray-300">Powered by ReservApp</p>
         </div>
 
-        <button
-          onClick={() => navigate(`/r/${slug}`)}
-          className="w-full py-2.5 border border-gray-200 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition-colors"
-        >
-          Hacer otra reserva
-        </button>
       </div>
     </div>
   )
 }
 
-function DetailRow({ icon, label, value }) {
+// ─── DetailRow ────────────────────────────────────────────────────────────────
+
+const ROW_COLORS = {
+  indigo: 'bg-indigo-50 border-indigo-100 text-indigo-500',
+  purple: 'bg-purple-50 border-purple-100 text-purple-500',
+  green:  'bg-green-50  border-green-100  text-green-500',
+  orange: 'bg-orange-50 border-orange-100 text-orange-500',
+}
+
+function DetailRow({ icon: Icon, color = 'indigo', label, value }) {
+  const c = ROW_COLORS[color]
   return (
-    <div className="flex items-center gap-3">
-      <div className="shrink-0">{icon}</div>
-      <div>
-        <p className="text-xs text-gray-400">{label}</p>
-        <p className="text-sm font-medium text-gray-800 capitalize">{value}</p>
+    <div className="flex items-center gap-3 p-3.5 bg-gray-50 rounded-xl border border-gray-100">
+      <div className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 ${c}`}>
+        <Icon className="w-4 h-4" />
+      </div>
+      <div className="min-w-0">
+        <p className="text-xs text-gray-400 font-medium">{label}</p>
+        <p className="text-sm font-semibold text-gray-800 truncate">{value}</p>
       </div>
     </div>
   )

@@ -6,13 +6,9 @@ import {
   getDay, addMonths, isBefore, startOfDay, isSameDay,
 } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight, Loader2, UtensilsCrossed } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Loader2, UtensilsCrossed, Check } from 'lucide-react'
 
 // ─── email ────────────────────────────────────────────────────────────────────
-// Uses the Supabase Edge Function `send-email` which calls Resend server-side.
-// This avoids CORS restrictions and keeps the API key out of the browser bundle.
-// Deploy instructions: see supabase/functions/send-email/index.ts
-
 async function sendConfirmationEmail({ client_name, client_email, restaurant_name, date, time, people, code }) {
   const { data, error } = await supabase.functions.invoke('smart-endpoint', {
     body: {
@@ -25,7 +21,6 @@ async function sendConfirmationEmail({ client_name, client_email, restaurant_nam
 }
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
-
 function generateSlots(openTime, closeTime, intervalMin) {
   const slots = []
   const [oh, om] = openTime.split(':').map(Number)
@@ -41,37 +36,38 @@ function generateSlots(openTime, closeTime, intervalMin) {
   return slots
 }
 
-
 // ─── Stepper ─────────────────────────────────────────────────────────────────
-
 function Stepper({ step }) {
   const steps = ['Fecha', 'Horario', 'Datos']
   return (
-    <div className="flex items-center justify-center mb-8">
+    <div className="flex items-start mb-8">
       {steps.map((label, idx) => {
-        const n = idx + 1
+        const n   = idx + 1
         const active = n === step
-        const done = n < step
+        const done   = n < step
         return (
-          <div key={n} className="flex items-center">
-            <div className="flex flex-col items-center">
-              <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
-                  done
-                    ? 'bg-indigo-500 text-white'
-                    : active
-                    ? 'bg-indigo-500 text-white ring-4 ring-indigo-100'
-                    : 'bg-gray-200 text-gray-500'
-                }`}
-              >
-                {done ? '✓' : n}
+          <div key={n} className="flex items-start flex-1">
+            {idx > 0 && (
+              <div className={`flex-1 h-0.5 mt-4 transition-colors ${done ? 'bg-indigo-400' : 'bg-gray-200'}`} />
+            )}
+            <div className="flex flex-col items-center shrink-0">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all ${
+                done
+                  ? 'bg-indigo-500 text-white'
+                  : active
+                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200'
+                  : 'bg-gray-100 text-gray-400'
+              }`}>
+                {done ? <Check className="w-4 h-4" /> : n}
               </div>
-              <span className={`mt-1 text-xs ${active ? 'text-indigo-600 font-medium' : 'text-gray-400'}`}>
+              <span className={`mt-1.5 text-xs font-medium ${
+                active ? 'text-indigo-600' : done ? 'text-indigo-400' : 'text-gray-400'
+              }`}>
                 {label}
               </span>
             </div>
             {idx < steps.length - 1 && (
-              <div className={`w-16 h-0.5 mx-2 mb-4 ${done ? 'bg-indigo-500' : 'bg-gray-200'}`} />
+              <div className={`flex-1 h-0.5 mt-4 transition-colors ${n < step ? 'bg-indigo-400' : 'bg-gray-200'}`} />
             )}
           </div>
         )
@@ -81,22 +77,20 @@ function Stepper({ step }) {
 }
 
 // ─── Step 1 — Calendar ───────────────────────────────────────────────────────
-
 function CalendarStep({ settings, onSelect }) {
   const today = startOfDay(new Date())
   const [viewMonth, setViewMonth] = useState(startOfMonth(today))
   const [selected, setSelected] = useState(null)
 
   const days = eachDayOfInterval({ start: startOfMonth(viewMonth), end: endOfMonth(viewMonth) })
-  const leadingBlanks = Array((getDay(days[0]) + 6) % 7).fill(null) // Mon=0
+  const leadingBlanks = Array((getDay(days[0]) + 6) % 7).fill(null)
 
-  const openDays = settings?.open_days ?? [1, 2, 3, 4, 5]
+  const openDays    = settings?.open_days    ?? [1, 2, 3, 4, 5]
   const blockedDates = settings?.blocked_dates ?? []
 
   function isDisabled(day) {
     if (isBefore(day, today)) return true
-    const jsDay = getDay(day) // 0=Sun
-    if (!openDays.includes(jsDay)) return true
+    if (!openDays.includes(getDay(day))) return true
     if (blockedDates.includes(format(day, 'yyyy-MM-dd'))) return true
     return false
   }
@@ -106,37 +100,32 @@ function CalendarStep({ settings, onSelect }) {
     if (!isBefore(prev, startOfMonth(today))) setViewMonth(prev)
   }
 
-  function handleSelect(day) {
-    if (isDisabled(day)) return
-    setSelected(day)
-  }
-
   return (
     <div>
       {/* Month nav */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-5">
         <button
           onClick={prevMonth}
           disabled={isSameDay(viewMonth, startOfMonth(today))}
-          className="p-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-30 transition-colors"
+          className="p-2 rounded-xl hover:bg-gray-100 disabled:opacity-30 transition-colors"
         >
-          <ChevronLeft className="w-5 h-5 text-gray-600" />
+          <ChevronLeft className="w-5 h-5 text-gray-500" />
         </button>
-        <span className="text-sm font-medium text-gray-800 capitalize">
+        <span className="text-sm font-semibold text-gray-800 capitalize">
           {format(viewMonth, 'MMMM yyyy', { locale: es })}
         </span>
         <button
           onClick={() => setViewMonth(addMonths(viewMonth, 1))}
-          className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+          className="p-2 rounded-xl hover:bg-gray-100 transition-colors"
         >
-          <ChevronRight className="w-5 h-5 text-gray-600" />
+          <ChevronRight className="w-5 h-5 text-gray-500" />
         </button>
       </div>
 
       {/* Day headers */}
-      <div className="grid grid-cols-7 mb-1">
+      <div className="grid grid-cols-7 mb-2">
         {['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do'].map(d => (
-          <div key={d} className="text-center text-xs text-gray-400 py-1">{d}</div>
+          <div key={d} className="text-center text-xs font-semibold text-gray-400 py-1">{d}</div>
         ))}
       </div>
 
@@ -144,22 +133,22 @@ function CalendarStep({ settings, onSelect }) {
       <div className="grid grid-cols-7 gap-1">
         {leadingBlanks.map((_, i) => <div key={`b${i}`} />)}
         {days.map(day => {
-          const disabled = isDisabled(day)
+          const disabled   = isDisabled(day)
           const isSelected = selected && isSameDay(day, selected)
-          const isToday = isSameDay(day, today)
+          const isToday    = isSameDay(day, today)
           return (
             <button
               key={day.toISOString()}
-              onClick={() => handleSelect(day)}
+              onClick={() => { if (!isDisabled(day)) setSelected(day) }}
               disabled={disabled}
-              className={`aspect-square rounded-lg text-sm transition-colors flex items-center justify-center ${
+              className={`aspect-square rounded-xl text-sm transition-all flex items-center justify-center font-medium ${
                 isSelected
-                  ? 'bg-indigo-500 text-white font-semibold'
+                  ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
                   : disabled
-                  ? 'text-gray-300 cursor-not-allowed'
+                  ? 'text-gray-200 cursor-not-allowed'
                   : isToday
-                  ? 'bg-indigo-50 text-indigo-600 font-medium hover:bg-indigo-100'
-                  : 'text-gray-700 hover:bg-gray-100'
+                  ? 'bg-indigo-50 text-indigo-600 ring-1 ring-indigo-200'
+                  : 'text-gray-700 hover:bg-indigo-50 hover:text-indigo-600'
               }`}
             >
               {format(day, 'd')}
@@ -171,7 +160,7 @@ function CalendarStep({ settings, onSelect }) {
       <button
         disabled={!selected}
         onClick={() => onSelect(selected)}
-        className="mt-6 w-full py-2.5 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-40 text-white text-sm font-medium rounded-lg transition-colors"
+        className="mt-6 w-full py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white text-sm font-semibold rounded-xl transition-all shadow-md shadow-indigo-100 disabled:shadow-none"
       >
         Continuar
       </button>
@@ -180,7 +169,6 @@ function CalendarStep({ settings, onSelect }) {
 }
 
 // ─── Step 2 — Time slots ─────────────────────────────────────────────────────
-
 function SlotsStep({ restaurant, settings, date, onSelect, onBack }) {
   const [slots, setSlots] = useState([])
   const [availability, setAvailability] = useState({})
@@ -188,24 +176,21 @@ function SlotsStep({ restaurant, settings, date, onSelect, onBack }) {
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(null)
 
-  useEffect(() => {
-    loadSlots()
-  }, [])
+  useEffect(() => { loadSlots() }, [])
 
   async function loadSlots() {
     setLoading(true)
     try {
       const rawSlots = generateSlots(
-        settings?.open_time ?? '12:00',
-        settings?.close_time ?? '23:00',
+        settings?.open_time    ?? '12:00',
+        settings?.close_time   ?? '23:00',
         settings?.slot_interval ?? 30
       )
       setSlots(rawSlots)
 
       const dateStr = format(date, 'yyyy-MM-dd')
 
-      // 2 queries total instead of 2×N
-      const [{ count: tableCount }, { data: booked }] = await Promise.all([
+      const [{ count: tc }, { data: booked }] = await Promise.all([
         supabase
           .from('tables')
           .select('*', { count: 'exact', head: true })
@@ -219,13 +204,12 @@ function SlotsStep({ restaurant, settings, date, onSelect, onBack }) {
           .neq('status', 'cancelled'),
       ])
 
-      // Count reservations per slot locally
       const countByTime = {}
       for (const r of booked ?? []) {
         countByTime[r.time] = (countByTime[r.time] ?? 0) + 1
       }
 
-      const total = tableCount ?? 0
+      const total = tc ?? 0
       setTableCount(total)
       const avail = {}
       for (const time of rawSlots) {
@@ -242,17 +226,17 @@ function SlotsStep({ restaurant, settings, date, onSelect, onBack }) {
 
   return (
     <div>
-      <p className="text-sm text-gray-500 mb-4 capitalize">
+      <p className="text-sm font-medium text-gray-500 mb-5 capitalize">
         {format(date, "EEEE d 'de' MMMM", { locale: es })}
       </p>
 
       {loading ? (
-        <div className="flex items-center gap-2 text-gray-400 py-8 justify-center">
-          <Loader2 className="w-5 h-5 animate-spin" />
-          Consultando disponibilidad...
+        <div className="flex flex-col items-center gap-3 text-gray-400 py-10">
+          <Loader2 className="w-6 h-6 animate-spin text-indigo-400" />
+          <span className="text-sm">Consultando disponibilidad...</span>
         </div>
       ) : tableCount === 0 ? (
-        <p className="text-center text-sm text-gray-400 py-8">
+        <p className="text-center text-sm text-gray-400 py-10">
           Este restaurante no tiene mesas disponibles por el momento.
         </p>
       ) : (
@@ -266,17 +250,23 @@ function SlotsStep({ restaurant, settings, date, onSelect, onBack }) {
                 key={time}
                 disabled={!info.available}
                 onClick={() => setSelected(time)}
-                className={`p-3 rounded-lg border text-sm transition-colors ${
+                className={`p-3.5 rounded-xl border-2 text-sm transition-all ${
                   isSelected
-                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700 font-medium'
+                    ? 'border-indigo-500 bg-indigo-50 shadow-md shadow-indigo-100'
                     : info.available
-                    ? 'border-gray-200 hover:border-indigo-300 text-gray-700'
-                    : 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed'
+                    ? 'border-gray-200 hover:border-indigo-300 hover:bg-indigo-50/50 bg-white'
+                    : 'border-gray-100 bg-gray-50 cursor-not-allowed'
                 }`}
               >
-                <div className="font-medium">{time}</div>
-                <div className="text-xs mt-0.5">
-                  {info.available ? `${free} mesa${free !== 1 ? 's' : ''}` : 'Completo'}
+                <div className={`font-bold text-base leading-none ${
+                  isSelected ? 'text-indigo-700' : info.available ? 'text-gray-800' : 'text-gray-300'
+                }`}>
+                  {time}
+                </div>
+                <div className={`text-xs mt-1 ${
+                  isSelected ? 'text-indigo-500' : info.available ? 'text-gray-400' : 'text-gray-300'
+                }`}>
+                  {info.available ? `${free} libre${free !== 1 ? 's' : ''}` : 'Completo'}
                 </div>
               </button>
             )
@@ -287,14 +277,14 @@ function SlotsStep({ restaurant, settings, date, onSelect, onBack }) {
       <div className="flex gap-3 mt-6">
         <button
           onClick={onBack}
-          className="flex-1 py-2.5 border border-gray-200 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition-colors"
+          className="flex-1 py-3 border-2 border-gray-200 text-gray-600 text-sm font-semibold rounded-xl hover:bg-gray-50 transition-colors"
         >
           Atrás
         </button>
         <button
           disabled={!selected}
           onClick={() => onSelect(selected)}
-          className="flex-1 py-2.5 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-40 text-white text-sm font-medium rounded-lg transition-colors"
+          className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white text-sm font-semibold rounded-xl transition-all shadow-md shadow-indigo-100 disabled:shadow-none"
         >
           Continuar
         </button>
@@ -304,10 +294,9 @@ function SlotsStep({ restaurant, settings, date, onSelect, onBack }) {
 }
 
 // ─── Step 3 — Customer form ───────────────────────────────────────────────────
-
 function CustomerForm({ restaurant, date, time, onBack }) {
   const navigate = useNavigate()
-  const [form, setForm] = useState({ name: '', email: '', phone: '', people: 2 })
+  const [form, setForm] = useState({ name: '', email: '', phone: '', people: 2, notes: '' })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
@@ -324,7 +313,6 @@ function CustomerForm({ restaurant, date, time, onBack }) {
       const dateStr = format(date, 'yyyy-MM-dd')
       const timeStr = time + ':00'
 
-      // ── Find an available table to assign ──────────────────────────────────
       const [
         { data: activeTables, error: tablesErr },
         { data: booked,       error: bookedErr },
@@ -346,14 +334,12 @@ function CustomerForm({ restaurant, date, time, onBack }) {
       if (tablesErr) throw tablesErr
       if (bookedErr) throw bookedErr
 
-      const bookedIds = new Set((booked ?? []).map(r => r.table_id))
+      const bookedIds  = new Set((booked ?? []).map(r => r.table_id))
       const freeTables = (activeTables ?? []).filter(t => !bookedIds.has(t.id))
-      const freeTable = freeTables.find(t => t.capacity >= form.people)
+      const freeTable  = freeTables.find(t => t.capacity >= form.people)
 
       if (!freeTable) {
-        const maxAvailable = freeTables.length > 0
-          ? Math.max(...freeTables.map(t => t.capacity))
-          : 0
+        const maxAvailable = freeTables.length > 0 ? Math.max(...freeTables.map(t => t.capacity)) : 0
         setError(
           freeTables.length === 0
             ? 'No hay mesas disponibles para este horario. Elige otro.'
@@ -363,7 +349,6 @@ function CustomerForm({ restaurant, date, time, onBack }) {
         return
       }
 
-      // ── Insert reservation ─────────────────────────────────────────────────
       const payload = {
         restaurant_id: restaurant.id,
         table_id:      freeTable.id,
@@ -375,6 +360,7 @@ function CustomerForm({ restaurant, date, time, onBack }) {
         status:        'confirmed',
       }
       if (form.phone) payload.client_phone = form.phone
+      if (form.notes.trim()) payload.notes = form.notes.trim()
 
       const { data, error: insertErr } = await supabase
         .from('reservations')
@@ -384,7 +370,6 @@ function CustomerForm({ restaurant, date, time, onBack }) {
 
       if (insertErr) throw insertErr
 
-      // Send confirmation email via Edge Function (non-blocking)
       const code = data.id.slice(0, 8).toUpperCase()
       sendConfirmationEmail({
         client_name:     data.client_name,
@@ -397,7 +382,6 @@ function CustomerForm({ restaurant, date, time, onBack }) {
       })
         .then(() => console.log('[send-email] enviado ok'))
         .catch(err => {
-          // Log but don't block — reservation is already confirmed
           console.error('[send-email] error:', err.message)
           setError(`Reserva confirmada, pero el email falló: ${err.message}`)
         })
@@ -412,66 +396,99 @@ function CustomerForm({ restaurant, date, time, onBack }) {
     }
   }
 
+  const inputClass = "w-full border border-gray-200 bg-gray-50/50 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 focus:bg-white transition-all placeholder-gray-400"
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="block text-sm text-gray-600 mb-1">Nombre *</label>
+        <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+          Nombre completo *
+        </label>
         <input
           required
           value={form.name}
           onChange={e => set('name', e.target.value)}
-          placeholder="Tu nombre completo"
-          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          placeholder="Tu nombre"
+          className={inputClass}
         />
       </div>
+
       <div>
-        <label className="block text-sm text-gray-600 mb-1">Email *</label>
+        <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+          Email *
+        </label>
         <input
           required
           type="email"
           value={form.email}
           onChange={e => set('email', e.target.value)}
           placeholder="tu@email.com"
-          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          className={inputClass}
         />
       </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+            Teléfono
+          </label>
+          <input
+            type="tel"
+            value={form.phone}
+            onChange={e => set('phone', e.target.value)}
+            placeholder="+34 600 000 000"
+            className={inputClass}
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+            Personas *
+          </label>
+          <select
+            value={form.people}
+            onChange={e => set('people', Number(e.target.value))}
+            className={inputClass}
+          >
+            {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
+              <option key={n} value={n}>{n} {n === 1 ? 'persona' : 'personas'}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       <div>
-        <label className="block text-sm text-gray-600 mb-1">Teléfono</label>
-        <input
-          type="tel"
-          value={form.phone}
-          onChange={e => set('phone', e.target.value)}
-          placeholder="+34 600 000 000"
-          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
+          Nota especial <span className="text-gray-400 normal-case font-normal">(opcional)</span>
+        </label>
+        <textarea
+          value={form.notes}
+          onChange={e => set('notes', e.target.value)}
+          placeholder="Cumpleaños, alergias, preferencia de mesa..."
+          rows={2}
+          maxLength={200}
+          className={`${inputClass} resize-none`}
         />
-      </div>
-      <div>
-        <label className="block text-sm text-gray-600 mb-1">Personas *</label>
-        <select
-          value={form.people}
-          onChange={e => set('people', Number(e.target.value))}
-          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        >
-          {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
-            <option key={n} value={n}>{n} {n === 1 ? 'persona' : 'personas'}</option>
-          ))}
-        </select>
+        <p className="text-right text-xs text-gray-300 mt-0.5">{form.notes.length}/200</p>
       </div>
 
-      {error && <p className="text-sm text-red-500">{error}</p>}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-xl px-3.5 py-2.5">
+          <p className="text-sm text-red-600">{error}</p>
+        </div>
+      )}
 
-      <div className="flex gap-3 pt-2">
+      <div className="flex gap-3 pt-1">
         <button
           type="button"
           onClick={onBack}
-          className="flex-1 py-2.5 border border-gray-200 text-gray-600 text-sm rounded-lg hover:bg-gray-50 transition-colors"
+          className="flex-1 py-3 border-2 border-gray-200 text-gray-600 text-sm font-semibold rounded-xl hover:bg-gray-50 transition-colors"
         >
           Atrás
         </button>
         <button
           type="submit"
           disabled={submitting}
-          className="flex-1 py-2.5 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+          className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-all shadow-md shadow-indigo-100 disabled:shadow-none flex items-center justify-center gap-2"
         >
           {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
           Confirmar reserva
@@ -482,7 +499,6 @@ function CustomerForm({ restaurant, date, time, onBack }) {
 }
 
 // ─── Main page ────────────────────────────────────────────────────────────────
-
 export default function ReservaPage() {
   const { slug } = useParams()
   const [step, setStep] = useState(1)
@@ -500,18 +516,12 @@ export default function ReservaPage() {
   useEffect(() => {
     async function load() {
       const { data: rest } = await supabase
-        .from('restaurants')
-        .select('*')
-        .eq('slug', slug)
-        .single()
+        .from('restaurants').select('*').eq('slug', slug).single()
 
       if (!rest) { setNotFound(true); setLoadingRestaurant(false); return }
 
       const { data: sett } = await supabase
-        .from('settings')
-        .select('*')
-        .eq('restaurant_id', rest.id)
-        .single()
+        .from('settings').select('*').eq('restaurant_id', rest.id).single()
 
       setRestaurant(rest)
       setSettings(sett)
@@ -522,7 +532,7 @@ export default function ReservaPage() {
 
   if (loadingRestaurant) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50/40 flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
       </div>
     )
@@ -530,9 +540,12 @@ export default function ReservaPage() {
 
   if (notFound || !restaurant) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center px-4">
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50/40 flex items-center justify-center px-4">
         <div className="text-center">
-          <h1 className="text-xl font-semibold text-gray-900">Restaurante no encontrado</h1>
+          <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+            <UtensilsCrossed className="w-8 h-8 text-gray-400" />
+          </div>
+          <h1 className="text-xl font-bold text-gray-900">Restaurante no encontrado</h1>
           <p className="text-gray-500 text-sm mt-2">El enlace puede ser incorrecto.</p>
         </div>
       </div>
@@ -540,59 +553,70 @@ export default function ReservaPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-start justify-center px-4 py-12">
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 w-full max-w-md p-6">
-        <div className="text-center mb-6">
-          <div className="flex justify-center mb-3">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50/40 flex items-start justify-center px-4 py-12">
+      <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/80 border border-gray-100 w-full max-w-md overflow-hidden">
+
+        {/* Restaurant header */}
+        <div className="px-7 pt-8 pb-6 text-center border-b border-gray-100">
+          <div className="flex justify-center mb-4">
             {restaurant.logo_url ? (
               <img
                 src={restaurant.logo_url}
                 alt={restaurant.name}
-                className="h-16 w-auto max-w-[140px] object-contain"
+                className="h-20 w-auto max-w-[160px] object-contain"
               />
             ) : (
-              <div className="w-14 h-14 rounded-xl bg-gray-100 flex items-center justify-center">
-                <UtensilsCrossed className="w-7 h-7 text-gray-400" />
+              <div className="w-16 h-16 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center">
+                <UtensilsCrossed className="w-8 h-8 text-indigo-400" />
               </div>
             )}
           </div>
-          <h1 className="text-xl font-semibold text-gray-900">{restaurant.name}</h1>
-          <p className="text-sm text-gray-400 mt-0.5">Reserva tu mesa</p>
+          <h1 className="text-xl font-bold text-gray-900">{restaurant.name}</h1>
+          <p className="text-sm text-gray-400 mt-1">Reservá tu mesa</p>
         </div>
 
-        {!settings ? (
-          <p className="text-center text-sm text-gray-400 py-6">
-            Este restaurante aún no tiene su horario configurado.<br />Vuelve más tarde.
-          </p>
-        ) : (
-          <>
-            <Stepper step={step} />
+        {/* Form area */}
+        <div className="px-7 py-7">
+          {!settings ? (
+            <p className="text-center text-sm text-gray-400 py-6">
+              Este restaurante aún no tiene su horario configurado.<br />Volvé más tarde.
+            </p>
+          ) : (
+            <>
+              <Stepper step={step} />
 
-            {step === 1 && (
-              <CalendarStep
-                settings={settings}
-                onSelect={date => { setSelectedDate(date); setStep(2) }}
-              />
-            )}
-            {step === 2 && (
-              <SlotsStep
-                restaurant={restaurant}
-                settings={settings}
-                date={selectedDate}
-                onSelect={time => { setSelectedTime(time); setStep(3) }}
-                onBack={() => setStep(1)}
-              />
-            )}
-            {step === 3 && (
-              <CustomerForm
-                restaurant={restaurant}
-                date={selectedDate}
-                time={selectedTime}
-                onBack={() => setStep(2)}
-              />
-            )}
-          </>
-        )}
+              {step === 1 && (
+                <CalendarStep
+                  settings={settings}
+                  onSelect={date => { setSelectedDate(date); setStep(2) }}
+                />
+              )}
+              {step === 2 && (
+                <SlotsStep
+                  restaurant={restaurant}
+                  settings={settings}
+                  date={selectedDate}
+                  onSelect={time => { setSelectedTime(time); setStep(3) }}
+                  onBack={() => setStep(1)}
+                />
+              )}
+              {step === 3 && (
+                <CustomerForm
+                  restaurant={restaurant}
+                  date={selectedDate}
+                  time={selectedTime}
+                  onBack={() => setStep(2)}
+                />
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Footer attribution */}
+        <div className="px-7 pb-5 text-center">
+          <p className="text-xs text-gray-300">Powered by ReservApp</p>
+        </div>
+
       </div>
     </div>
   )

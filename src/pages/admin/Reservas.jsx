@@ -3,16 +3,16 @@ import { supabase } from '../../lib/supabase'
 import { useRestaurant } from '../../hooks/useRestaurant'
 import { Toast, useToast } from '../../components/admin/Toast'
 import { format } from 'date-fns'
-import { Search, CheckCheck, X, Loader2, CalendarDays } from 'lucide-react'
+import { Search, CheckCheck, X, Loader2, CalendarDays, Users, LayoutGrid, MessageSquare } from 'lucide-react'
 
 const STATUS = {
-  confirmed: { label: 'Confirmada', cls: 'bg-indigo-500/10 text-indigo-400' },
-  completed: { label: 'Completada', cls: 'bg-green-500/10 text-green-400' },
-  cancelled: { label: 'Cancelada', cls: 'bg-red-500/10 text-red-400' },
+  confirmed: { label: 'Confirmada', cls: 'bg-indigo-50 text-indigo-700 border border-indigo-100' },
+  completed: { label: 'Completada', cls: 'bg-green-50 text-green-700 border border-green-100' },
+  cancelled: { label: 'Cancelada',  cls: 'bg-red-50 text-red-700 border border-red-100' },
 }
 
 const STATUS_FILTERS = [
-  { value: 'all', label: 'Todas' },
+  { value: 'all',       label: 'Todas' },
   { value: 'confirmed', label: 'Confirmadas' },
   { value: 'completed', label: 'Completadas' },
   { value: 'cancelled', label: 'Canceladas' },
@@ -64,9 +64,11 @@ export default function Reservas() {
 
   if (restaurantLoading) {
     return (
-      <div className="p-8 flex items-center gap-3 text-gray-400">
-        <Loader2 className="w-5 h-5 animate-spin" />
-        Cargando...
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+          <span className="text-sm text-gray-400">Cargando...</span>
+        </div>
       </div>
     )
   }
@@ -75,123 +77,220 @@ export default function Reservas() {
     <>
       <Toast toast={toast} />
 
-      <div className="p-4 sm:p-8">
-        <h2 className="text-2xl font-semibold text-white mb-1">Reservas</h2>
-        <p className="text-gray-500 text-sm mb-6">{restaurant?.name}</p>
+      <div className="p-6 md:p-10">
+
+        {/* ── Header ── */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Reservas</h2>
+          <p className="text-gray-500 text-sm mt-1">{restaurant?.name}</p>
+        </div>
 
         {/* ── Filters ── */}
-        <div className="flex flex-wrap gap-3 mb-6">
-          {/* Date */}
-          <div className="relative">
-            <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
-            <input
-              type="date"
-              value={date}
-              onChange={e => setDate(e.target.value)}
-              className="bg-gray-900 border border-gray-800 text-white text-sm rounded-lg pl-9 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
+        <div className="bg-white border border-gray-200 rounded-2xl p-4 mb-6 space-y-3 shadow-sm">
+          <div className="flex flex-col sm:flex-row gap-3">
+            {/* Date */}
+            <div className="relative">
+              <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              <input
+                type="date"
+                value={date}
+                onChange={e => setDate(e.target.value)}
+                className="input pl-9 w-full sm:w-auto"
+              />
+            </div>
+
+            {/* Search */}
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Buscar por nombre..."
+                className="input pl-9 w-full"
+              />
+            </div>
           </div>
 
-          {/* Status tabs */}
-          <div className="flex bg-gray-900 border border-gray-800 rounded-lg p-1 gap-1">
+          {/* Status filters */}
+          <div className="flex gap-1 bg-gray-100 rounded-xl p-1 overflow-x-auto">
             {STATUS_FILTERS.map(f => (
               <button
                 key={f.value}
                 onClick={() => setStatusFilter(f.value)}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
                   statusFilter === f.value
-                    ? 'bg-indigo-500 text-white'
-                    : 'text-gray-400 hover:text-white'
+                    ? 'bg-indigo-500 text-white shadow-sm'
+                    : 'text-gray-500 hover:text-gray-900 hover:bg-white'
                 }`}
               >
                 {f.label}
               </button>
             ))}
           </div>
-
-          {/* Search */}
-          <div className="relative flex-1 min-w-48">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Buscar por nombre..."
-              className="w-full bg-gray-900 border border-gray-800 text-white text-sm rounded-lg pl-9 pr-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-gray-600"
-            />
-          </div>
         </div>
 
-        {/* ── Table ── */}
+        {/* ── Content ── */}
         {loading ? (
-          <div className="flex items-center gap-2 text-gray-500 text-sm py-12 justify-center">
-            <Loader2 className="w-5 h-5 animate-spin" />
-            Cargando reservas...
+          <div className="flex flex-col items-center gap-3 py-20">
+            <Loader2 className="w-7 h-7 animate-spin text-indigo-500" />
+            <span className="text-sm text-gray-400">Cargando reservas...</span>
           </div>
         ) : filtered.length === 0 ? (
           <EmptyState date={date} hasFilters={statusFilter !== 'all' || !!search} />
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-gray-800">
-            <table className="w-full text-sm min-w-[700px]">
-              <thead>
-                <tr className="text-gray-500 text-xs uppercase tracking-wider border-b border-gray-800 bg-gray-900/50">
-                  <th className="px-4 py-3 text-left">Hora</th>
-                  <th className="px-4 py-3 text-left">Cliente</th>
-                  <th className="px-4 py-3 text-left">Email</th>
-                  <th className="px-4 py-3 text-left">Teléfono</th>
-                  <th className="px-4 py-3 text-left">Personas</th>
-                  <th className="px-4 py-3 text-left">Mesa</th>
-                  <th className="px-4 py-3 text-left">Estado</th>
-                  <th className="px-4 py-3 text-right">Acciones</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-800">
-                {filtered.map(r => {
-                  const s = STATUS[r.status] ?? STATUS.confirmed
-                  return (
-                    <tr key={r.id} className="bg-gray-900 hover:bg-gray-800/60 transition-colors">
-                      <td className="px-4 py-3 text-white font-medium tabular-nums">
-                        {r.time?.slice(0, 5)}
-                      </td>
-                      <td className="px-4 py-3 text-gray-200">{r.client_name}</td>
-                      <td className="px-4 py-3 text-gray-400 max-w-[180px] truncate">{r.client_email}</td>
-                      <td className="px-4 py-3 text-gray-400">{r.client_phone ?? '—'}</td>
-                      <td className="px-4 py-3 text-gray-400">{r.people}</td>
-                      <td className="px-4 py-3 text-gray-400">
-                        {r.tables?.number != null ? `Mesa ${r.tables.number}` : '—'}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${s.cls}`}>
-                          {s.label}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <ActionButtons reservation={r} onUpdate={updateStatus} />
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+          <>
+            {/* Result count */}
+            <p className="text-xs text-gray-500 mb-3 px-1">
+              {filtered.length} reserva{filtered.length !== 1 ? 's' : ''} encontrada{filtered.length !== 1 ? 's' : ''}
+            </p>
+
+            {/* ── Desktop: table ── */}
+            <div className="hidden md:block overflow-x-auto rounded-2xl border border-gray-200 shadow-sm">
+              <table className="w-full text-sm min-w-[900px]">
+                <thead>
+                  <tr className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider border-b border-gray-100">
+                    <th className="px-4 py-3 text-left">Hora</th>
+                    <th className="px-4 py-3 text-left">Cliente</th>
+                    <th className="px-4 py-3 text-left">Email</th>
+                    <th className="px-4 py-3 text-left">Teléfono</th>
+                    <th className="px-4 py-3 text-left">Personas</th>
+                    <th className="px-4 py-3 text-left">Mesa</th>
+                    <th className="px-4 py-3 text-left">Estado</th>
+                    <th className="px-4 py-3 text-left">Nota</th>
+                    <th className="px-4 py-3 text-right">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 bg-white">
+                  {filtered.map(r => {
+                    const s = STATUS[r.status] ?? STATUS.confirmed
+                    return (
+                      <tr key={r.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-4 py-3 text-gray-900 font-bold tabular-nums">
+                          {r.time?.slice(0, 5)}
+                        </td>
+                        <td className="px-4 py-3 text-gray-700 font-medium">{r.client_name}</td>
+                        <td className="px-4 py-3 text-gray-500 max-w-[160px] truncate">{r.client_email}</td>
+                        <td className="px-4 py-3 text-gray-500">{r.client_phone ?? '—'}</td>
+                        <td className="px-4 py-3 text-gray-500">{r.people}</td>
+                        <td className="px-4 py-3 text-gray-500">
+                          {r.tables?.number != null ? `Mesa ${r.tables.number}` : '—'}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${s.cls}`}>
+                            {s.label}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          {r.notes ? (
+                            <span title={r.notes} className="cursor-help inline-flex items-center gap-1.5 text-xs text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-1 rounded-lg max-w-[140px]">
+                              <MessageSquare className="w-3 h-3 shrink-0" />
+                              <span className="truncate">{r.notes}</span>
+                            </span>
+                          ) : (
+                            <span className="text-gray-400 text-xs">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <ActionButtons reservation={r} onUpdate={updateStatus} />
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* ── Mobile: cards ── */}
+            <div className="md:hidden space-y-3">
+              {filtered.map(r => {
+                const s = STATUS[r.status] ?? STATUS.confirmed
+                return (
+                  <div key={r.id} className="bg-white border border-gray-200 rounded-2xl p-4 space-y-3 shadow-sm">
+                    {/* Top row: time + name + status */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-12 h-12 rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center shrink-0">
+                          <span className="text-gray-900 font-bold text-sm tabular-nums leading-none">
+                            {r.time?.slice(0, 5)}
+                          </span>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-gray-900 font-semibold text-sm truncate">{r.client_name}</p>
+                          <p className="text-gray-500 text-xs truncate">{r.client_email}</p>
+                        </div>
+                      </div>
+                      <span className={`px-2.5 py-1 rounded-full text-xs font-medium shrink-0 ${s.cls}`}>
+                        {s.label}
+                      </span>
+                    </div>
+
+                    {/* Meta row */}
+                    <div className="flex items-center gap-4 text-xs text-gray-500 pt-2 border-t border-gray-100 flex-wrap">
+                      <span className="flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5 text-gray-400" />
+                        {r.people} persona{r.people !== 1 ? 's' : ''}
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <LayoutGrid className="w-3.5 h-3.5 text-gray-400" />
+                        {r.tables?.number != null ? `Mesa ${r.tables.number}` : 'Sin mesa'}
+                      </span>
+                      {r.client_phone && (
+                        <span className="text-gray-400">{r.client_phone}</span>
+                      )}
+                    </div>
+
+                    {/* Nota */}
+                    {r.notes && (
+                      <div className="flex items-start gap-2 px-3 py-2.5 bg-indigo-50 border border-indigo-100 rounded-xl">
+                        <MessageSquare className="w-3.5 h-3.5 text-indigo-500 shrink-0 mt-0.5" />
+                        <p className="text-xs text-indigo-700 leading-relaxed">{r.notes}</p>
+                      </div>
+                    )}
+
+                    {/* Actions */}
+                    {r.status !== 'cancelled' && (
+                      <div className="flex gap-2 pt-1">
+                        {r.status === 'confirmed' && (
+                          <button
+                            onClick={() => updateStatus(r.id, 'completed')}
+                            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-green-50 text-green-700 hover:bg-green-100 border border-green-100 transition-colors"
+                          >
+                            <CheckCheck className="w-3.5 h-3.5" />
+                            Completar
+                          </button>
+                        )}
+                        <button
+                          onClick={() => updateStatus(r.id, 'cancelled')}
+                          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-red-50 text-red-700 hover:bg-red-100 border border-red-100 transition-colors"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                          Cancelar
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </>
         )}
       </div>
     </>
   )
 }
 
-// ─── Action buttons ───────────────────────────────────────────────────────────
+// ─── Action buttons (desktop) ─────────────────────────────────────────────────
 
 function ActionButtons({ reservation, onUpdate }) {
   const { status, id } = reservation
-  if (status === 'cancelled') return <span className="text-gray-700 text-xs">—</span>
+  if (status === 'cancelled') return <span className="text-gray-400 text-xs">—</span>
 
   return (
     <div className="flex items-center justify-end gap-1.5">
       {status === 'confirmed' && (
         <button
           onClick={() => onUpdate(id, 'completed')}
-          title="Completar"
-          className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors"
+          className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-green-50 text-green-700 hover:bg-green-100 border border-green-100 transition-colors"
         >
           <CheckCheck className="w-3.5 h-3.5" />
           Completar
@@ -199,8 +298,7 @@ function ActionButtons({ reservation, onUpdate }) {
       )}
       <button
         onClick={() => onUpdate(id, 'cancelled')}
-        title="Cancelar"
-        className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
+        className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-red-50 text-red-700 hover:bg-red-100 border border-red-100 transition-colors"
       >
         <X className="w-3.5 h-3.5" />
         Cancelar
@@ -214,13 +312,15 @@ function ActionButtons({ reservation, onUpdate }) {
 function EmptyState({ date, hasFilters }) {
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
-      <div className="w-14 h-14 rounded-full bg-gray-800 flex items-center justify-center mb-4">
-        <CalendarDays className="w-7 h-7 text-gray-600" />
+      <div className="w-14 h-14 rounded-2xl bg-gray-100 border border-gray-200 flex items-center justify-center mb-4">
+        <CalendarDays className="w-7 h-7 text-gray-300" />
       </div>
-      <p className="text-gray-400 font-medium">
-        {hasFilters ? 'Sin resultados para los filtros aplicados' : 'Sin reservas para este día'}
+      <p className="text-gray-700 font-semibold text-sm">
+        {hasFilters ? 'Sin resultados' : 'Sin reservas para este día'}
       </p>
-      <p className="text-gray-600 text-sm mt-1">{date}</p>
+      <p className="text-gray-400 text-xs mt-1">
+        {hasFilters ? 'Prueba cambiando los filtros.' : date}
+      </p>
     </div>
   )
 }

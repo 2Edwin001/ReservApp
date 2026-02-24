@@ -5,6 +5,7 @@ import Login from './pages/admin/Login'
 import Dashboard from './pages/admin/Dashboard'
 import Reservas from './pages/admin/Reservas'
 import Configuracion from './pages/admin/Configuracion'
+import Reportes from './pages/admin/Reportes'
 import ReservaPage from './pages/public/ReservaPage'
 import Confirmacion from './pages/public/Confirmacion'
 
@@ -25,6 +26,7 @@ export default function App() {
             <Route path="/admin/dashboard" element={<Dashboard />} />
             <Route path="/admin/reservas" element={<Reservas />} />
             <Route path="/admin/configuracion" element={<Configuracion />} />
+            <Route path="/admin/reportes" element={<Reportes />} />
           </Route>
         </Route>
 
