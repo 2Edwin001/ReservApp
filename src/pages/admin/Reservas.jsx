@@ -39,7 +39,7 @@ export default function Reservas() {
     setLoading(true)
     const { data, error } = await supabase
       .from('reservations')
-      .select('*, resources(number)')
+      .select('*, resources(name, number)')
       .eq('restaurant_id', restaurant.id)
       .eq('date', date)
       .order('time')
@@ -174,7 +174,7 @@ export default function Reservas() {
                         <td className="px-4 py-3 text-gray-500">{r.client_phone ?? '—'}</td>
                         <td className="px-4 py-3 text-gray-500">{r.people}</td>
                         <td className="px-4 py-3 text-gray-500">
-                          {r.resources?.number != null ? `${unitLabel(restaurant?.business_type, 'singular')} ${r.resources.number}` : '—'}
+                          {r.resources?.name || (r.resources?.number != null ? `${unitLabel(restaurant?.business_type, 'singular')} ${r.resources.number}` : '—')}
                         </td>
                         <td className="px-4 py-3">
                           <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${s.cls}`}>
@@ -233,7 +233,7 @@ export default function Reservas() {
                       </span>
                       <span className="flex items-center gap-1.5">
                         <LayoutGrid className="w-3.5 h-3.5 text-gray-400" />
-                        {r.resources?.number != null ? `${unitLabel(restaurant?.business_type, 'singular')} ${r.resources.number}` : `Sin ${unitLabel(restaurant?.business_type, 'singular').toLowerCase()}`}
+                        {r.resources?.name || (r.resources?.number != null ? `${unitLabel(restaurant?.business_type, 'singular')} ${r.resources.number}` : `Sin ${unitLabel(restaurant?.business_type, 'singular').toLowerCase()}`)}
                       </span>
                       {r.client_phone && (
                         <span className="text-gray-400">{r.client_phone}</span>

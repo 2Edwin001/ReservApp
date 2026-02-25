@@ -194,7 +194,7 @@ function SlotsStep({ restaurant, settings, date, businessType, onSelect, onBack 
       const [{ data: res }, { data: booked }] = await Promise.all([
         supabase
           .from('resources')
-          .select('id, number, capacity')
+          .select('id, name, number, capacity')
           .eq('restaurant_id', restaurant.id)
           .neq('is_active', false)
           .order('number'),
@@ -256,7 +256,7 @@ function SlotsStep({ restaurant, settings, date, businessType, onSelect, onBack 
             const free = info.freeResources.length
             const isSelected = selected === time
             const freeLabel = free <= 2
-              ? info.freeResources.map(r => `${singLabel} ${r.number}`).join(' · ')
+              ? info.freeResources.map(r => r.name || `${singLabel} ${r.number}`).join(' · ')
               : `${free} ${free !== 1 ? plurLabel : singLabel.toLowerCase()}`
             return (
               <button
@@ -334,7 +334,7 @@ function CustomerForm({ restaurant, settings, date, time, businessType, onBack }
       ] = await Promise.all([
         supabase
           .from('resources')
-          .select('id, number, capacity')
+          .select('id, name, number, capacity')
           .eq('restaurant_id', restaurant.id)
           .neq('is_active', false),
         supabase
@@ -407,7 +407,12 @@ function CustomerForm({ restaurant, settings, date, time, businessType, onBack }
         })
 
       navigate(`/r/${restaurant.slug}/confirmacion`, {
-        state: { reservation: data, restaurant, resource_number: freeTable.number, deposit_percentage: depositPct },
+        state: {
+          reservation: data,
+          restaurant,
+          resource_name: freeTable.name || `${unitLabel(restaurant.business_type, 'singular')} ${freeTable.number}`,
+          deposit_percentage: depositPct,
+        },
       })
     } catch (err) {
       console.error('[createReservation] error:', err)

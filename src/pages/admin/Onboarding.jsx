@@ -78,9 +78,9 @@ export default function Onboarding() {
   const [depositPct,    setDepositPct]    = useState(20)
 
   // Paso 2 — recursos
-  const [resources,        setResources]        = useState([])
-  const [newNumber,        setNewNumber]        = useState('')
-  const [newCapacity,      setNewCapacity]      = useState(2)
+  const [resources,   setResources]   = useState([])
+  const [newName,     setNewName]     = useState('')
+  const [newCapacity, setNewCapacity] = useState(2)
 
   // Si ya tiene configuración, ir directo al dashboard
   useEffect(() => {
@@ -120,19 +120,19 @@ export default function Onboarding() {
 
   // ── Paso 2: agregar recurso a lista local ─────────────────────────────────
   function addResource() {
-    if (!newNumber) return
-    const num = parseInt(newNumber)
-    if (resources.find(r => r.number === num)) {
-      setError(`Ya existe un ${unitLabel(restaurant?.business_type, 'singular').toLowerCase()} con ese número.`)
+    const trimmed = newName.trim()
+    if (!trimmed) return
+    if (resources.find(r => r.name.toLowerCase() === trimmed.toLowerCase())) {
+      setError(`Ya existe un ${unitLabel(restaurant?.business_type, 'singular').toLowerCase()} con ese nombre.`)
       return
     }
-    setResources(prev => [...prev, { number: num, capacity: newCapacity }])
-    setNewNumber('')
+    setResources(prev => [...prev, { name: trimmed, capacity: newCapacity }])
+    setNewName('')
     setError(null)
   }
 
-  function removeResource(number) {
-    setResources(prev => prev.filter(r => r.number !== number))
+  function removeResource(name) {
+    setResources(prev => prev.filter(r => r.name !== name))
   }
 
   // ── Paso 2: guardar recursos ──────────────────────────────────────────────
@@ -143,9 +143,10 @@ export default function Onboarding() {
     }
     setSaving(true); setError(null)
     try {
-      const rows = resources.map(r => ({
+      const rows = resources.map((r, i) => ({
         restaurant_id: restaurant.id,
-        number:        r.number,
+        number:        i + 1,
+        name:          r.name,
         capacity:      r.capacity,
         is_active:     true,
       }))
@@ -347,14 +348,14 @@ export default function Onboarding() {
               {resources.length > 0 && (
                 <div className="space-y-2">
                   {resources.map(r => (
-                    <div key={r.number} className="flex items-center justify-between bg-gray-800 border border-gray-700 rounded-xl px-3.5 py-2.5">
-                      <div className="flex items-center gap-3">
-                        <span className="text-white text-sm font-medium">{unitSingular} {r.number}</span>
-                        <span className="text-xs text-gray-500 bg-gray-700 px-2 py-0.5 rounded-full">{r.capacity} personas</span>
+                    <div key={r.name} className="flex items-center justify-between bg-gray-800 border border-gray-700 rounded-xl px-3.5 py-2.5">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="text-white text-sm font-medium truncate">{r.name}</span>
+                        <span className="text-xs text-gray-500 bg-gray-700 px-2 py-0.5 rounded-full shrink-0">{r.capacity} personas</span>
                       </div>
                       <button
-                        onClick={() => removeResource(r.number)}
-                        className="text-gray-600 hover:text-red-400 transition-colors p-1"
+                        onClick={() => removeResource(r.name)}
+                        className="text-gray-600 hover:text-red-400 transition-colors p-1 shrink-0"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -377,13 +378,12 @@ export default function Onboarding() {
                     </div>
                     <div className="flex gap-2">
                       <input
-                        type="number"
-                        value={newNumber}
-                        onChange={e => setNewNumber(e.target.value)}
+                        type="text"
+                        value={newName}
+                        onChange={e => setNewName(e.target.value)}
                         onKeyDown={e => e.key === 'Enter' && addResource()}
-                        placeholder="Nº"
-                        min={1}
-                        className="w-20 bg-gray-800 border border-gray-700 text-white placeholder-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                        placeholder={`Ej: ${unitSingular} VIP`}
+                        className="flex-1 bg-gray-800 border border-gray-700 text-white placeholder-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
                       />
                       {locked ? (
                         <div className="flex-1 bg-gray-800/60 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-500 flex items-center">
@@ -403,7 +403,7 @@ export default function Onboarding() {
                       <button
                         type="button"
                         onClick={addResource}
-                        disabled={!newNumber}
+                        disabled={!newName.trim()}
                         className="flex items-center gap-1.5 px-3 py-2 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-40 text-white text-sm font-medium rounded-lg transition-colors shrink-0"
                       >
                         <Plus className="w-4 h-4" />

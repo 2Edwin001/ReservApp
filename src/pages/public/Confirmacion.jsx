@@ -16,7 +16,7 @@ export default function Confirmacion() {
 
   if (!state?.reservation) return null
 
-  const { reservation, restaurant, resource_number, deposit_percentage } = state
+  const { reservation, restaurant, resource_name, deposit_percentage } = state
   const dateFormatted  = format(parseISO(reservation.date), "EEEE d 'de' MMMM yyyy", { locale: es })
   const timeFormatted  = reservation.time.slice(0, 5)
   const code           = reservation.id.slice(0, 8).toUpperCase()
@@ -68,12 +68,12 @@ export default function Confirmacion() {
               label="Hora"
               value={timeFormatted}
             />
-            {resource_number != null && (
+            {resource_name && (
               <DetailRow
                 icon={LayoutGrid}
                 color="teal"
                 label={unitLabel(businessType, 'singular')}
-                value={`${unitLabel(businessType, 'singular')} ${resource_number}`}
+                value={resource_name}
               />
             )}
             <DetailRow

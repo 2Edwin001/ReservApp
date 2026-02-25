@@ -53,7 +53,7 @@ export default function Configuracion() {
 
   // Mesas
   const [tables, setTables] = useState([])
-  const [newTableNumber, setNewTableNumber] = useState('')
+  const [newTableName, setNewTableName] = useState('')
   const [newTableCapacity, setNewTableCapacity] = useState(4)
   const [loadingTables, setLoadingTables] = useState(false)
 
@@ -261,15 +261,17 @@ export default function Configuracion() {
 
   // ── Tables CRUD ──
   async function addTable() {
-    if (!newTableNumber || !restaurant) return
+    if (!newTableName.trim() || !restaurant) return
+    const nextNumber = (tables.reduce((max, t) => Math.max(max, t.number ?? 0), 0)) + 1
     const { error } = await supabase.from('resources').insert({
       restaurant_id: restaurant.id,
-      number: parseInt(newTableNumber),
-      capacity: newTableCapacity,
-      is_active: true,
+      number:        nextNumber,
+      name:          newTableName.trim(),
+      capacity:      newTableCapacity,
+      is_active:     true,
     })
     if (error) { showToast('error', error.message); return }
-    setNewTableNumber('')
+    setNewTableName('')
     setNewTableCapacity(4)
     loadTables()
   }
@@ -636,7 +638,7 @@ export default function Configuracion() {
                     <tbody className="divide-y divide-gray-100 bg-white">
                       {tables.map(t => (
                         <tr key={t.id} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-4 py-3 text-gray-900 font-medium">{unitLabel(restaurant?.business_type, 'singular')} {t.number}</td>
+                          <td className="px-4 py-3 text-gray-900 font-medium">{t.name || `${unitLabel(restaurant?.business_type, 'singular')} ${t.number}`}</td>
                           <td className="px-4 py-3">
                             <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 text-xs border border-gray-200">
                               {t.capacity} personas
@@ -689,12 +691,12 @@ export default function Configuracion() {
                       </div>
                       <div className="flex gap-2">
                         <input
-                          type="number"
-                          value={newTableNumber}
-                          onChange={e => setNewTableNumber(e.target.value)}
-                          placeholder={`Nº`}
-                          className="input w-24"
-                          min={1}
+                          type="text"
+                          value={newTableName}
+                          onChange={e => setNewTableName(e.target.value)}
+                          onKeyDown={e => e.key === 'Enter' && addTable()}
+                          placeholder={`Ej: ${unitLabel(restaurant?.business_type, 'singular')} VIP`}
+                          className="input flex-1"
                         />
                         {locked ? (
                           <div className="input flex-1 text-gray-400 flex items-center">
@@ -713,7 +715,7 @@ export default function Configuracion() {
                         )}
                         <button
                           onClick={addTable}
-                          disabled={!newTableNumber}
+                          disabled={!newTableName.trim()}
                           className="flex items-center gap-1.5 px-4 py-2 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-40 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
                         >
                           <Plus className="w-4 h-4" />
