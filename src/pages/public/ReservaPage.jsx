@@ -368,7 +368,11 @@ function CustomerForm({ restaurant, date, time, onBack }) {
         .select()
         .single()
 
-      if (insertErr) throw insertErr
+      if (insertErr) {
+        console.error('Error completo:', JSON.stringify(insertErr, null, 2))
+        console.error('Payload enviado:', JSON.stringify(payload, null, 2))
+        throw insertErr
+      }
 
       const code = data.id.slice(0, 8).toUpperCase()
       sendConfirmationEmail({
