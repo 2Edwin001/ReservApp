@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
 
     if (type === 'confirmation') {
       const sendResult = await resend.emails.send({
-        from: 'RestaurantBook <reservas@reservapp.space>',
+        from: 'ReservApp <reservas@reservapp.space>',
         to: [reservation.client_email],
         subject: `Reserva confirmada — ${reservation.restaurant_name}`,
         html: `
@@ -63,7 +63,7 @@ Deno.serve(async (req) => {
 
     if (type === 'admin_notification' && reservation.admin_email) {
       const adminResult = await resend.emails.send({
-        from: 'RestaurantBook <reservas@reservapp.space>',
+        from: 'ReservApp <reservas@reservapp.space>',
         to: [reservation.admin_email],
         subject: `Nueva reserva — ${reservation.client_name}`,
         html: `
