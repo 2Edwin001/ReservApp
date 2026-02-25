@@ -570,9 +570,7 @@ export default function ReservaPage() {
                 className="h-20 w-auto max-w-[160px] object-contain"
               />
             ) : (
-              <div className="w-16 h-16 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center">
-                <UtensilsCrossed className="w-8 h-8 text-indigo-400" />
-              </div>
+              <img src="/logo.png" alt="ReservApp" className="h-20 w-auto max-w-[160px] object-contain" />
             )}
           </div>
           <h1 className="text-xl font-bold text-gray-900">{restaurant.name}</h1>

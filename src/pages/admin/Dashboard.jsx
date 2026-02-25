@@ -219,30 +219,32 @@ function ReservationLink({ restaurant }) {
           <p className="text-xs text-gray-400">
             Compartí este link o QR para que tus clientes puedan reservar.
           </p>
-          <div className="flex items-center gap-2">
-            <div className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 truncate select-all font-mono min-w-0">
+          <div className="flex flex-col gap-2">
+            <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 truncate select-all font-mono min-w-0">
               {url}
             </div>
-            <button
-              onClick={copyLink}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors shrink-0 ${
-                copied
-                  ? 'bg-green-50 text-green-700 border border-green-200'
-                  : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200'
-              }`}
-            >
-              {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-              {copied ? 'Copiado' : 'Copiar'}
-            </button>
-            <a
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-100 transition-colors shrink-0"
-            >
-              <ExternalLink className="w-4 h-4" />
-              <span className="hidden sm:inline">Abrir</span>
-            </a>
+            <div className="flex gap-2">
+              <button
+                onClick={copyLink}
+                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  copied
+                    ? 'bg-green-50 text-green-700 border border-green-200'
+                    : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200'
+                }`}
+              >
+                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                {copied ? 'Copiado' : 'Copiar'}
+              </button>
+              <a
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border border-indigo-100 transition-colors"
+              >
+                <ExternalLink className="w-4 h-4" />
+                Abrir
+              </a>
+            </div>
           </div>
         </div>
       </div>

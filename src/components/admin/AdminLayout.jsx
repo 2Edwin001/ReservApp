@@ -51,9 +51,7 @@ export default function AdminLayout() {
 
           {/* ReservApp badge */}
           <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-gray-800/60 border border-gray-700/50 rounded-lg w-fit">
-            <div className="w-3.5 h-3.5 rounded bg-indigo-500 flex items-center justify-center shrink-0">
-              <UtensilsCrossed className="w-2 h-2 text-white" />
-            </div>
+            <img src="/logo.png" alt="ReservApp" className="w-3.5 h-3.5 rounded shrink-0 object-contain" />
             <span className="text-[10px] text-gray-500 font-medium tracking-wide">ReservApp</span>
           </div>
         </div>
