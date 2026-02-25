@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { useRestaurant } from '../../hooks/useRestaurant'
 import { Toast, useToast } from '../../components/admin/Toast'
 import { Plus, Trash2, Save, Loader2, ImagePlus, X, Store, Clock, LayoutGrid, CalendarX } from 'lucide-react'
+import { unitLabel, capacityRange } from '../../lib/businessTypes'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
 
@@ -15,8 +16,6 @@ const DAYS = [
   { value: 6, label: 'Sá', full: 'Sábado' },
   { value: 0, label: 'Do', full: 'Domingo' },
 ]
-
-const CAPACITIES = [2, 4, 6, 8]
 
 const TABS = [
   { id: 'info',       label: 'Información general', icon: Store },
@@ -44,11 +43,13 @@ export default function Configuracion() {
   const [uploadingLogo, setUploadingLogo] = useState(false)
 
   // Horarios
-  const [openTime, setOpenTime] = useState('12:00')
-  const [closeTime, setCloseTime] = useState('23:00')
-  const [slotInterval, setSlotInterval] = useState(30)
-  const [openDays, setOpenDays] = useState([1, 2, 3, 4, 5])
-  const [savingHours, setSavingHours] = useState(false)
+  const [openTime,        setOpenTime]        = useState('12:00')
+  const [closeTime,       setCloseTime]       = useState('23:00')
+  const [slotInterval,    setSlotInterval]    = useState(30)
+  const [openDays,        setOpenDays]        = useState([1, 2, 3, 4, 5])
+  const [requiresDeposit, setRequiresDeposit] = useState(false)
+  const [depositPct,      setDepositPct]      = useState(20)
+  const [savingHours,     setSavingHours]     = useState(false)
 
   // Mesas
   const [tables, setTables] = useState([])
@@ -75,12 +76,18 @@ export default function Configuracion() {
       setCloseTime(settings.close_time ?? '23:00')
       setSlotInterval(settings.slot_interval ?? 30)
       setOpenDays(settings.open_days ?? [1, 2, 3, 4, 5])
+      setRequiresDeposit(settings.requires_deposit ?? false)
+      setDepositPct(settings.deposit_percentage || 20)
       setBlockedDates(settings.blocked_dates ?? [])
     }
   }, [settings])
 
   useEffect(() => {
-    if (restaurant) loadTables()
+    if (restaurant) {
+      loadTables()
+      const r = capacityRange(restaurant.business_type)
+      setNewTableCapacity(r.min)
+    }
   }, [restaurant])
 
   // ── Tables ──
@@ -88,7 +95,7 @@ export default function Configuracion() {
     if (!restaurant) return
     setLoadingTables(true)
     const { data, error } = await supabase
-      .from('tables')
+      .from('resources')
       .select('*')
       .eq('restaurant_id', restaurant.id)
       .order('number')
@@ -214,11 +221,13 @@ export default function Configuracion() {
     setSavingHours(true)
     try {
       const payload = {
-        restaurant_id: restaurant.id,
-        open_time: openTime,
-        close_time: closeTime,
-        slot_interval: slotInterval,
-        open_days: openDays,
+        restaurant_id:      restaurant.id,
+        open_time:          openTime,
+        close_time:         closeTime,
+        slot_interval:      slotInterval,
+        open_days:          openDays,
+        requires_deposit:   requiresDeposit,
+        deposit_percentage: requiresDeposit ? depositPct : 0,
       }
       if (settings?.id) payload.id = settings.id
 
@@ -253,7 +262,7 @@ export default function Configuracion() {
   // ── Tables CRUD ──
   async function addTable() {
     if (!newTableNumber || !restaurant) return
-    const { error } = await supabase.from('tables').insert({
+    const { error } = await supabase.from('resources').insert({
       restaurant_id: restaurant.id,
       number: parseInt(newTableNumber),
       capacity: newTableCapacity,
@@ -267,7 +276,7 @@ export default function Configuracion() {
 
   async function toggleTableActive(table) {
     const { error } = await supabase
-      .from('tables')
+      .from('resources')
       .update({ is_active: !table.is_active })
       .eq('id', table.id)
     if (error) showToast('error', error.message)
@@ -279,7 +288,6 @@ export default function Configuracion() {
       .from('reservations')
       .select('*', { count: 'exact', head: true })
       .eq('table_id', id)
-      .neq('status', 'cancelled')
 
     if (checkError) { showToast('error', checkError.message); return }
 
@@ -295,14 +303,19 @@ export default function Configuracion() {
 
     if (!window.confirm('¿Eliminar esta mesa?')) return
 
-    const { error } = await supabase.from('tables').delete().eq('id', id)
+    const { error } = await supabase.from('resources').delete().eq('id', id)
     if (error) showToast('error', error.message)
     else loadTables()
   }
 
   // ── Blocked dates ──
   async function addBlockedDate() {
-    if (!newBlockedDate || blockedDates.includes(newBlockedDate)) return
+    if (!newBlockedDate) return
+    if (newBlockedDate < format(new Date(), 'yyyy-MM-dd')) {
+      showToast('error', 'No podés bloquear fechas pasadas.')
+      return
+    }
+    if (blockedDates.includes(newBlockedDate)) return
     const updated = [...blockedDates, newBlockedDate].sort()
     await saveBlockedDates(updated)
     setNewBlockedDate('')
@@ -366,7 +379,9 @@ export default function Configuracion() {
 
         {/* ── Tab navigation ── */}
         <div className="flex gap-1 p-1 bg-white border border-gray-200 rounded-xl mb-8 shadow-sm">
-          {TABS.map(({ id, label, icon: Icon }) => (
+          {TABS.map(({ id, label: defaultLabel, icon: Icon }) => {
+            const label = id === 'mesas' ? unitLabel(restaurant?.business_type, 'plural') : defaultLabel
+            return (
             <button
               key={id}
               onClick={() => setActiveTab(id)}
@@ -379,7 +394,8 @@ export default function Configuracion() {
               <Icon className="w-4 h-4 shrink-0" />
               <span className="hidden sm:inline">{label}</span>
             </button>
-          ))}
+            )
+          })}
         </div>
 
         {/* ── Información general ── */}
@@ -548,26 +564,70 @@ export default function Configuracion() {
                 </p>
               </div>
 
+              {/* Depósito anticipado */}
+              <div className="border border-gray-200 rounded-xl overflow-hidden">
+                <div className="flex items-center justify-between gap-3 px-4 py-3.5 bg-gray-50">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-gray-900">Pago anticipado</p>
+                    <p className="text-xs text-gray-500 mt-0.5">¿Se requiere un depósito para confirmar la reserva?</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setRequiresDeposit(v => !v)}
+                    className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
+                      requiresDeposit ? 'bg-indigo-500' : 'bg-gray-300'
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                      requiresDeposit ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
+                </div>
+
+                {requiresDeposit && (
+                  <div className="px-4 py-4 space-y-3 border-t border-gray-100">
+                    <Label>% del depósito</Label>
+                    <div className="flex gap-2 flex-wrap">
+                      {[10, 20, 25, 30, 50].map(p => (
+                        <button
+                          key={p}
+                          type="button"
+                          onClick={() => setDepositPct(p)}
+                          className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+                            depositPct === p
+                              ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/20'
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200'
+                          }`}
+                        >
+                          {p}%
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs text-gray-400">El cliente verá este porcentaje antes de confirmar su reserva.</p>
+                  </div>
+                )}
+              </div>
+
               <SaveButton onClick={saveHours} loading={savingHours} />
             </div>
           </Section>
         )}
 
-        {/* ── Mesas ── */}
+        {/* ── Recursos ── */}
         {activeTab === 'mesas' && (
-          <Section title="Mesas" icon={LayoutGrid}>
+          <Section title={unitLabel(restaurant?.business_type, 'plural')} icon={LayoutGrid}>
             <div className="space-y-6">
               {loadingTables ? (
                 <div className="flex items-center gap-2 text-gray-400 text-sm py-6">
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Cargando mesas...
+                  Cargando {unitLabel(restaurant?.business_type, 'plural').toLowerCase()}...
                 </div>
               ) : tables.length > 0 ? (
                 <div className="overflow-x-auto rounded-xl border border-gray-200">
                   <table className="w-full text-sm min-w-[360px]">
                     <thead>
                       <tr className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider border-b border-gray-100">
-                        <th className="px-4 py-3 text-left">Mesa</th>
+                        <th className="px-4 py-3 text-left">{unitLabel(restaurant?.business_type, 'singular')}</th>
                         <th className="px-4 py-3 text-left">Capacidad</th>
                         <th className="px-4 py-3 text-left">Estado</th>
                         <th className="px-4 py-3" />
@@ -576,7 +636,7 @@ export default function Configuracion() {
                     <tbody className="divide-y divide-gray-100 bg-white">
                       {tables.map(t => (
                         <tr key={t.id} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-4 py-3 text-gray-900 font-medium">Mesa {t.number}</td>
+                          <td className="px-4 py-3 text-gray-900 font-medium">{unitLabel(restaurant?.business_type, 'singular')} {t.number}</td>
                           <td className="px-4 py-3">
                             <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 text-xs border border-gray-200">
                               {t.capacity} personas
@@ -610,40 +670,59 @@ export default function Configuracion() {
               ) : (
                 <div className="text-center py-12 rounded-xl border-2 border-dashed border-gray-200">
                   <LayoutGrid className="w-9 h-9 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500 text-sm font-medium">Sin mesas configuradas</p>
-                  <p className="text-gray-400 text-xs mt-1">Agrega tu primera mesa para gestionar reservas.</p>
+                  <p className="text-gray-500 text-sm font-medium">Sin {unitLabel(restaurant?.business_type, 'plural').toLowerCase()} configurados</p>
+                  <p className="text-gray-400 text-xs mt-1">Agrega {unitLabel(restaurant?.business_type, 'article')} para gestionar reservas.</p>
                 </div>
               )}
 
               <div>
-                <Label>Agregar nueva mesa</Label>
-                <div className="flex gap-2">
-                  <input
-                    type="number"
-                    value={newTableNumber}
-                    onChange={e => setNewTableNumber(e.target.value)}
-                    placeholder="Nº mesa"
-                    className="input w-24"
-                    min={1}
-                  />
-                  <select
-                    value={newTableCapacity}
-                    onChange={e => setNewTableCapacity(Number(e.target.value))}
-                    className="input flex-1"
-                  >
-                    {CAPACITIES.map(c => (
-                      <option key={c} value={c}>{c} personas</option>
-                    ))}
-                  </select>
-                  <button
-                    onClick={addTable}
-                    disabled={!newTableNumber}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-40 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
-                  >
-                    <Plus className="w-4 h-4" />
-                    Agregar
-                  </button>
-                </div>
+                {(() => {
+                  const range  = capacityRange(restaurant?.business_type)
+                  const locked = range.min === range.max
+                  return (
+                    <>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <Label className="mb-0">Agregar {unitLabel(restaurant?.business_type, 'singular').toLowerCase()}</Label>
+                        {!locked && (
+                          <span className="text-xs text-gray-400">Capacidad: {range.min}–{range.max} personas</span>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="number"
+                          value={newTableNumber}
+                          onChange={e => setNewTableNumber(e.target.value)}
+                          placeholder={`Nº`}
+                          className="input w-24"
+                          min={1}
+                        />
+                        {locked ? (
+                          <div className="input flex-1 text-gray-400 flex items-center">
+                            {range.min} {range.min === 1 ? 'persona' : 'personas'}
+                          </div>
+                        ) : (
+                          <input
+                            type="number"
+                            value={newTableCapacity}
+                            min={range.min}
+                            max={range.max}
+                            onChange={e => setNewTableCapacity(Math.min(range.max, Math.max(range.min, Number(e.target.value))))}
+                            placeholder="Cap."
+                            className="input flex-1"
+                          />
+                        )}
+                        <button
+                          onClick={addTable}
+                          disabled={!newTableNumber}
+                          className="flex items-center gap-1.5 px-4 py-2 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-40 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
+                        >
+                          <Plus className="w-4 h-4" />
+                          Agregar
+                        </button>
+                      </div>
+                    </>
+                  )
+                })()}
               </div>
             </div>
           </Section>

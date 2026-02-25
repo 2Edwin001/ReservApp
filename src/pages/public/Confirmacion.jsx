@@ -1,8 +1,9 @@
 import { useParams, useLocation, useNavigate } from 'react-router-dom'
 import { useEffect } from 'react'
-import { CheckCircle, Calendar, Clock, Users, User, UtensilsCrossed } from 'lucide-react'
+import { CheckCircle, Calendar, Clock, Users, User, LayoutGrid } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { unitLabel, BUSINESS_ICONS } from '../../lib/businessTypes'
 
 export default function Confirmacion() {
   const { slug } = useParams()
@@ -15,10 +16,12 @@ export default function Confirmacion() {
 
   if (!state?.reservation) return null
 
-  const { reservation, restaurant } = state
-  const dateFormatted = format(parseISO(reservation.date), "EEEE d 'de' MMMM yyyy", { locale: es })
-  const timeFormatted = reservation.time.slice(0, 5)
-  const code          = reservation.id.slice(0, 8).toUpperCase()
+  const { reservation, restaurant, resource_number, deposit_percentage } = state
+  const dateFormatted  = format(parseISO(reservation.date), "EEEE d 'de' MMMM yyyy", { locale: es })
+  const timeFormatted  = reservation.time.slice(0, 5)
+  const code           = reservation.id.slice(0, 8).toUpperCase()
+  const businessType   = restaurant?.business_type
+  const businessIcon   = BUSINESS_ICONS[businessType] ?? '🏪'
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50/40 flex items-start justify-center px-4 py-12">
@@ -31,7 +34,7 @@ export default function Confirmacion() {
           </div>
           <h1 className="text-2xl font-bold text-white mb-1">¡Reserva confirmada!</h1>
           <p className="text-indigo-200 text-sm">
-            Te esperamos en <span className="text-white font-semibold">{restaurant?.name ?? slug}</span>
+            {businessIcon} Te esperamos en <span className="text-white font-semibold">{restaurant?.name ?? slug}</span>
           </p>
         </div>
 
@@ -65,6 +68,14 @@ export default function Confirmacion() {
               label="Hora"
               value={timeFormatted}
             />
+            {resource_number != null && (
+              <DetailRow
+                icon={LayoutGrid}
+                color="teal"
+                label={unitLabel(businessType, 'singular')}
+                value={`${unitLabel(businessType, 'singular')} ${resource_number}`}
+              />
+            )}
             <DetailRow
               icon={Users}
               color="green"
@@ -78,6 +89,19 @@ export default function Confirmacion() {
               value={reservation.client_name}
             />
           </div>
+
+          {/* Aviso de depósito */}
+          {deposit_percentage > 0 && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3.5 flex items-start gap-3">
+              <span className="text-xl shrink-0 leading-none mt-0.5">💳</span>
+              <div>
+                <p className="text-sm font-semibold text-amber-800">Depósito requerido: {deposit_percentage}%</p>
+                <p className="text-xs text-amber-600 mt-0.5">
+                  El negocio se pondrá en contacto contigo para coordinar el pago anticipado.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* CTA */}
           <button
@@ -105,6 +129,7 @@ const ROW_COLORS = {
   purple: 'bg-purple-50 border-purple-100 text-purple-500',
   green:  'bg-green-50  border-green-100  text-green-500',
   orange: 'bg-orange-50 border-orange-100 text-orange-500',
+  teal:   'bg-teal-50   border-teal-100   text-teal-500',
 }
 
 function DetailRow({ icon: Icon, color = 'indigo', label, value }) {

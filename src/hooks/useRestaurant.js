@@ -15,7 +15,7 @@ export function useRestaurant() {
       const { data: rest } = await supabase
         .from('restaurants')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('owner_id', user.id)
         .single()
 
       if (!rest) return

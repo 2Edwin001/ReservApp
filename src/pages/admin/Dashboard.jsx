@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useRestaurant } from '../../hooks/useRestaurant'
+import { useNavigate } from 'react-router-dom'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { Loader2, Copy, Check, ExternalLink, CalendarDays, TrendingUp, Clock, Link2, Download } from 'lucide-react'
@@ -15,10 +16,18 @@ const STATUS_LABELS = {
 export default function Dashboard() {
   useEffect(() => { document.title = 'Dashboard · ReservApp' }, [])
 
-  const { restaurant, loading: restaurantLoading } = useRestaurant()
+  const navigate = useNavigate()
+  const { restaurant, settings, loading: restaurantLoading } = useRestaurant()
   const [stats, setStats] = useState({ today: 0, week: 0, confirmed: 0 })
   const [todayReservations, setTodayReservations] = useState([])
   const [loadingData, setLoadingData] = useState(false)
+
+  // Redirigir al onboarding si no tiene configuración
+  useEffect(() => {
+    if (!restaurantLoading && restaurant && !settings) {
+      navigate('/admin/onboarding', { replace: true })
+    }
+  }, [restaurantLoading, restaurant, settings])
 
   useEffect(() => {
     if (!restaurant) return
@@ -27,28 +36,33 @@ export default function Dashboard() {
 
   async function loadDashboardData(restaurantId) {
     setLoadingData(true)
-    const today    = format(new Date(), 'yyyy-MM-dd')
-    const nextWeek = format(new Date(Date.now() + 7 * 86400000), 'yyyy-MM-dd')
+    try {
+      const today    = format(new Date(), 'yyyy-MM-dd')
+      const nextWeek = format(new Date(Date.now() + 7 * 86400000), 'yyyy-MM-dd')
 
-    const [
-      { count: todayCount },
-      { count: weekCount },
-      { count: confirmedCount },
-      { data: reservations },
-    ] = await Promise.all([
-      supabase.from('reservations').select('*', { count: 'exact', head: true })
-        .eq('restaurant_id', restaurantId).eq('date', today).neq('status', 'cancelled'),
-      supabase.from('reservations').select('*', { count: 'exact', head: true })
-        .eq('restaurant_id', restaurantId).gte('date', today).lte('date', nextWeek).neq('status', 'cancelled'),
-      supabase.from('reservations').select('*', { count: 'exact', head: true })
-        .eq('restaurant_id', restaurantId).eq('status', 'confirmed').gte('date', today),
-      supabase.from('reservations').select('*')
-        .eq('restaurant_id', restaurantId).eq('date', today).neq('status', 'cancelled').order('time').limit(10),
-    ])
+      const [
+        { count: todayCount },
+        { count: weekCount },
+        { count: confirmedCount },
+        { data: reservations },
+      ] = await Promise.all([
+        supabase.from('reservations').select('*', { count: 'exact', head: true })
+          .eq('restaurant_id', restaurantId).eq('date', today).neq('status', 'cancelled'),
+        supabase.from('reservations').select('*', { count: 'exact', head: true })
+          .eq('restaurant_id', restaurantId).gte('date', today).lte('date', nextWeek).neq('status', 'cancelled'),
+        supabase.from('reservations').select('*', { count: 'exact', head: true })
+          .eq('restaurant_id', restaurantId).eq('status', 'confirmed').gte('date', today),
+        supabase.from('reservations').select('*')
+          .eq('restaurant_id', restaurantId).eq('date', today).neq('status', 'cancelled').order('time').limit(10),
+      ])
 
-    setStats({ today: todayCount ?? 0, week: weekCount ?? 0, confirmed: confirmedCount ?? 0 })
-    setTodayReservations(reservations ?? [])
-    setLoadingData(false)
+      setStats({ today: todayCount ?? 0, week: weekCount ?? 0, confirmed: confirmedCount ?? 0 })
+      setTodayReservations(reservations ?? [])
+    } catch (err) {
+      console.error('[Dashboard] error cargando datos:', err)
+    } finally {
+      setLoadingData(false)
+    }
   }
 
   if (restaurantLoading) {

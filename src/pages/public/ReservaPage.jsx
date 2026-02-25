@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { unitLabel, BUSINESS_ICONS, capacityRange } from '../../lib/businessTypes'
 import {
   format, startOfMonth, endOfMonth, eachDayOfInterval,
   getDay, addMonths, isBefore, startOfDay, isSameDay,
@@ -169,10 +170,10 @@ function CalendarStep({ settings, onSelect }) {
 }
 
 // ─── Step 2 — Time slots ─────────────────────────────────────────────────────
-function SlotsStep({ restaurant, settings, date, onSelect, onBack }) {
+function SlotsStep({ restaurant, settings, date, businessType, onSelect, onBack }) {
   const [slots, setSlots] = useState([])
   const [availability, setAvailability] = useState({})
-  const [tableCount, setTableCount] = useState(null)
+  const [resources, setResources] = useState([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(null)
 
@@ -190,31 +191,37 @@ function SlotsStep({ restaurant, settings, date, onSelect, onBack }) {
 
       const dateStr = format(date, 'yyyy-MM-dd')
 
-      const [{ count: tc }, { data: booked }] = await Promise.all([
+      const [{ data: res }, { data: booked }] = await Promise.all([
         supabase
-          .from('tables')
-          .select('*', { count: 'exact', head: true })
+          .from('resources')
+          .select('id, number, capacity')
           .eq('restaurant_id', restaurant.id)
-          .neq('is_active', false),
+          .neq('is_active', false)
+          .order('number'),
         supabase
           .from('reservations')
-          .select('time')
+          .select('time, table_id')
           .eq('restaurant_id', restaurant.id)
           .eq('date', dateStr)
           .neq('status', 'cancelled'),
       ])
 
-      const countByTime = {}
+      const activeResources = res ?? []
+      setResources(activeResources)
+
+      // Group booked resource IDs by HH:MM time
+      const bookedByTime = {}
       for (const r of booked ?? []) {
-        countByTime[r.time] = (countByTime[r.time] ?? 0) + 1
+        const t = r.time?.slice(0, 5)
+        if (!bookedByTime[t]) bookedByTime[t] = new Set()
+        bookedByTime[t].add(r.table_id)
       }
 
-      const total = tc ?? 0
-      setTableCount(total)
       const avail = {}
       for (const time of rawSlots) {
-        const reserved = countByTime[time + ':00'] ?? 0
-        avail[time] = { available: reserved < total, tableCount: total, reservationCount: reserved }
+        const bookedIds   = bookedByTime[time] ?? new Set()
+        const freeResources = activeResources.filter(r => !bookedIds.has(r.id))
+        avail[time] = { available: freeResources.length > 0, freeResources }
       }
       setAvailability(avail)
     } catch (err) {
@@ -223,6 +230,9 @@ function SlotsStep({ restaurant, settings, date, onSelect, onBack }) {
       setLoading(false)
     }
   }
+
+  const singLabel = unitLabel(businessType, 'singular')
+  const plurLabel = unitLabel(businessType, 'plural').toLowerCase()
 
   return (
     <div>
@@ -235,16 +245,19 @@ function SlotsStep({ restaurant, settings, date, onSelect, onBack }) {
           <Loader2 className="w-6 h-6 animate-spin text-indigo-400" />
           <span className="text-sm">Consultando disponibilidad...</span>
         </div>
-      ) : tableCount === 0 ? (
+      ) : resources.length === 0 ? (
         <p className="text-center text-sm text-gray-400 py-10">
-          Este restaurante no tiene mesas disponibles por el momento.
+          No hay {plurLabel} disponibles por el momento.
         </p>
       ) : (
         <div className="grid grid-cols-3 gap-2">
           {slots.map(time => {
-            const info = availability[time] ?? { available: false, tableCount: 0, reservationCount: 0 }
-            const free = info.tableCount - info.reservationCount
+            const info = availability[time] ?? { available: false, freeResources: [] }
+            const free = info.freeResources.length
             const isSelected = selected === time
+            const freeLabel = free <= 2
+              ? info.freeResources.map(r => `${singLabel} ${r.number}`).join(' · ')
+              : `${free} ${free !== 1 ? plurLabel : singLabel.toLowerCase()}`
             return (
               <button
                 key={time}
@@ -263,10 +276,10 @@ function SlotsStep({ restaurant, settings, date, onSelect, onBack }) {
                 }`}>
                   {time}
                 </div>
-                <div className={`text-xs mt-1 ${
+                <div className={`text-xs mt-1 leading-tight ${
                   isSelected ? 'text-indigo-500' : info.available ? 'text-gray-400' : 'text-gray-300'
                 }`}>
-                  {info.available ? `${free} libre${free !== 1 ? 's' : ''}` : 'Completo'}
+                  {info.available ? freeLabel : 'Completo'}
                 </div>
               </button>
             )
@@ -294,9 +307,11 @@ function SlotsStep({ restaurant, settings, date, onSelect, onBack }) {
 }
 
 // ─── Step 3 — Customer form ───────────────────────────────────────────────────
-function CustomerForm({ restaurant, date, time, onBack }) {
+function CustomerForm({ restaurant, settings, date, time, businessType, onBack }) {
   const navigate = useNavigate()
-  const [form, setForm] = useState({ name: '', email: '', phone: '', people: 2, notes: '' })
+  const range = capacityRange(businessType)
+  const depositPct = settings?.requires_deposit ? (settings.deposit_percentage ?? 0) : 0
+  const [form, setForm] = useState({ name: '', email: '', phone: '', people: range.min, notes: '' })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
@@ -318,8 +333,8 @@ function CustomerForm({ restaurant, date, time, onBack }) {
         { data: booked,       error: bookedErr },
       ] = await Promise.all([
         supabase
-          .from('tables')
-          .select('id, capacity')
+          .from('resources')
+          .select('id, number, capacity')
           .eq('restaurant_id', restaurant.id)
           .neq('is_active', false),
         supabase
@@ -340,10 +355,11 @@ function CustomerForm({ restaurant, date, time, onBack }) {
 
       if (!freeTable) {
         const maxAvailable = freeTables.length > 0 ? Math.max(...freeTables.map(t => t.capacity)) : 0
+        const plur = unitLabel(businessType, 'plural').toLowerCase()
         setError(
           freeTables.length === 0
-            ? 'No hay mesas disponibles para este horario. Elige otro.'
-            : `No hay mesas con capacidad para ${form.people} personas. El máximo disponible es ${maxAvailable}.`
+            ? `No hay ${plur} disponibles para este horario. Elige otro.`
+            : `No hay ${plur} con capacidad para ${form.people} personas. El máximo disponible es ${maxAvailable}.`
         )
         setSubmitting(false)
         return
@@ -391,7 +407,7 @@ function CustomerForm({ restaurant, date, time, onBack }) {
         })
 
       navigate(`/r/${restaurant.slug}/confirmacion`, {
-        state: { reservation: data, restaurant },
+        state: { reservation: data, restaurant, resource_number: freeTable.number, deposit_percentage: depositPct },
       })
     } catch (err) {
       console.error('[createReservation] error:', err)
@@ -447,16 +463,25 @@ function CustomerForm({ restaurant, date, time, onBack }) {
         <div>
           <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
             Personas *
+            {range.min !== range.max && (
+              <span className="ml-1 normal-case font-normal text-gray-400">({range.min}–{range.max})</span>
+            )}
           </label>
-          <select
-            value={form.people}
-            onChange={e => set('people', Number(e.target.value))}
-            className={inputClass}
-          >
-            {Array.from({ length: 10 }, (_, i) => i + 1).map(n => (
-              <option key={n} value={n}>{n} {n === 1 ? 'persona' : 'personas'}</option>
-            ))}
-          </select>
+          {range.min === range.max ? (
+            <div className={`${inputClass} text-gray-500`}>
+              {range.min} {range.min === 1 ? 'persona' : 'personas'}
+            </div>
+          ) : (
+            <input
+              type="number"
+              required
+              min={range.min}
+              max={range.max}
+              value={form.people}
+              onChange={e => set('people', Math.min(range.max, Math.max(range.min, Number(e.target.value))))}
+              className={inputClass}
+            />
+          )}
         </div>
       </div>
 
@@ -474,6 +499,16 @@ function CustomerForm({ restaurant, date, time, onBack }) {
         />
         <p className="text-right text-xs text-gray-300 mt-0.5">{form.notes.length}/200</p>
       </div>
+
+      {depositPct > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-3.5 py-3 flex items-start gap-2.5">
+          <span className="text-lg shrink-0 leading-none mt-0.5">💳</span>
+          <div>
+            <p className="text-sm font-semibold text-amber-800">Requiere depósito del {depositPct}%</p>
+            <p className="text-xs text-amber-600 mt-0.5">El negocio te contactará para coordinar el pago antes de tu reserva.</p>
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-xl px-3.5 py-2.5">
@@ -514,7 +549,7 @@ export default function ReservaPage() {
   const [notFound, setNotFound] = useState(false)
 
   useEffect(() => {
-    if (restaurant) document.title = `${restaurant.name} · Reserva tu mesa`
+    if (restaurant) document.title = `${restaurant.name} · Reserva ${unitLabel(restaurant.business_type, 'article')}`
   }, [restaurant])
 
   useEffect(() => {
@@ -570,18 +605,20 @@ export default function ReservaPage() {
                 className="h-20 w-auto max-w-[160px] object-contain"
               />
             ) : (
-              <img src="/logo.png" alt="ReservApp" className="h-20 w-auto max-w-[160px] object-contain" />
+              <div className="w-16 h-16 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-3xl mx-auto">
+                {BUSINESS_ICONS[restaurant.business_type] ?? '🏪'}
+              </div>
             )}
           </div>
           <h1 className="text-xl font-bold text-gray-900">{restaurant.name}</h1>
-          <p className="text-sm text-gray-400 mt-1">Reservá tu mesa</p>
+          <p className="text-sm text-gray-400 mt-1">Reservá {unitLabel(restaurant.business_type, 'article')}</p>
         </div>
 
         {/* Form area */}
         <div className="px-7 py-7">
           {!settings ? (
             <p className="text-center text-sm text-gray-400 py-6">
-              Este restaurante aún no tiene su horario configurado.<br />Volvé más tarde.
+              Este negocio aún no tiene su horario configurado.<br />Volvé más tarde.
             </p>
           ) : (
             <>
@@ -598,6 +635,7 @@ export default function ReservaPage() {
                   restaurant={restaurant}
                   settings={settings}
                   date={selectedDate}
+                  businessType={restaurant.business_type}
                   onSelect={time => { setSelectedTime(time); setStep(3) }}
                   onBack={() => setStep(1)}
                 />
@@ -605,8 +643,10 @@ export default function ReservaPage() {
               {step === 3 && (
                 <CustomerForm
                   restaurant={restaurant}
+                  settings={settings}
                   date={selectedDate}
                   time={selectedTime}
+                  businessType={restaurant.business_type}
                   onBack={() => setStep(2)}
                 />
               )}

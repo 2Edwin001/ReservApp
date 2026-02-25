@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { Mail, Lock, AlertCircle, Loader2 } from 'lucide-react'
 
@@ -135,7 +135,10 @@ export default function Login() {
         </div>
 
         <p className="text-center text-gray-600 text-xs mt-6">
-          © {new Date().getFullYear()} ReservApp
+          ¿No tienes cuenta?{' '}
+          <Link to="/register" className="text-indigo-400 hover:text-indigo-300 transition-colors">
+            Regístrate gratis
+          </Link>
         </p>
       </div>
     </div>
