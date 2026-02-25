@@ -195,7 +195,7 @@ function SlotsStep({ restaurant, settings, date, onSelect, onBack }) {
           .from('tables')
           .select('*', { count: 'exact', head: true })
           .eq('restaurant_id', restaurant.id)
-          .eq('is_active', true),
+          .neq('is_active', false),
         supabase
           .from('reservations')
           .select('time')
@@ -321,7 +321,7 @@ function CustomerForm({ restaurant, date, time, onBack }) {
           .from('tables')
           .select('id, capacity')
           .eq('restaurant_id', restaurant.id)
-          .eq('is_active', true),
+          .neq('is_active', false),
         supabase
           .from('reservations')
           .select('table_id')
