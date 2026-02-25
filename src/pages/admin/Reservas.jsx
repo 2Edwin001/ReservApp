@@ -89,13 +89,13 @@ export default function Reservas() {
         <div className="bg-white border border-gray-200 rounded-2xl p-4 mb-6 space-y-3 shadow-sm">
           <div className="flex flex-col sm:flex-row gap-3">
             {/* Date */}
-            <div className="relative">
+            <div className="relative w-full sm:w-auto">
               <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
               <input
                 type="date"
                 value={date}
                 onChange={e => setDate(e.target.value)}
-                className="input pl-9 w-full sm:w-auto"
+                className="input pl-9 w-full"
               />
             </div>
 
@@ -112,12 +112,12 @@ export default function Reservas() {
           </div>
 
           {/* Status filters */}
-          <div className="flex gap-1 bg-gray-100 rounded-xl p-1 overflow-x-auto">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 bg-gray-100 rounded-xl p-1">
             {STATUS_FILTERS.map(f => (
               <button
                 key={f.value}
                 onClick={() => setStatusFilter(f.value)}
-                className={`flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
                   statusFilter === f.value
                     ? 'bg-indigo-500 text-white shadow-sm'
                     : 'text-gray-500 hover:text-gray-900 hover:bg-white'
