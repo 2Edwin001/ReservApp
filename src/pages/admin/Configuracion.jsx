@@ -43,13 +43,15 @@ export default function Configuracion() {
   const [uploadingLogo, setUploadingLogo] = useState(false)
 
   // Horarios
-  const [openTime,        setOpenTime]        = useState('12:00')
-  const [closeTime,       setCloseTime]       = useState('23:00')
-  const [slotInterval,    setSlotInterval]    = useState(30)
-  const [openDays,        setOpenDays]        = useState([1, 2, 3, 4, 5])
-  const [requiresDeposit, setRequiresDeposit] = useState(false)
-  const [depositPct,      setDepositPct]      = useState(20)
-  const [savingHours,     setSavingHours]     = useState(false)
+  const [openTime,            setOpenTime]            = useState('12:00')
+  const [closeTime,           setCloseTime]           = useState('23:00')
+  const [slotInterval,        setSlotInterval]        = useState(30)
+  const [openDays,            setOpenDays]            = useState([1, 2, 3, 4, 5])
+  const [requiresDeposit,     setRequiresDeposit]     = useState(false)
+  const [depositPct,          setDepositPct]          = useState(20)
+  const [requiresPrepayment,  setRequiresPrepayment]  = useState(false)
+  const [prepaymentMessage,   setPrepaymentMessage]   = useState('')
+  const [savingHours,         setSavingHours]         = useState(false)
 
   // Mesas
   const [tables, setTables] = useState([])
@@ -78,6 +80,8 @@ export default function Configuracion() {
       setOpenDays(settings.open_days ?? [1, 2, 3, 4, 5])
       setRequiresDeposit(settings.requires_deposit ?? false)
       setDepositPct(settings.deposit_percentage || 20)
+      setRequiresPrepayment(settings.requires_prepayment ?? false)
+      setPrepaymentMessage(settings.prepayment_message ?? '')
       setBlockedDates(settings.blocked_dates ?? [])
     }
   }, [settings])
@@ -221,13 +225,15 @@ export default function Configuracion() {
     setSavingHours(true)
     try {
       const payload = {
-        restaurant_id:      restaurant.id,
-        open_time:          openTime,
-        close_time:         closeTime,
-        slot_interval:      slotInterval,
-        open_days:          openDays,
-        requires_deposit:   requiresDeposit,
-        deposit_percentage: requiresDeposit ? depositPct : 0,
+        restaurant_id:       restaurant.id,
+        open_time:           openTime,
+        close_time:          closeTime,
+        slot_interval:       slotInterval,
+        open_days:           openDays,
+        requires_deposit:    requiresDeposit,
+        deposit_percentage:  requiresDeposit ? depositPct : 0,
+        requires_prepayment: requiresPrepayment,
+        prepayment_message:  requiresPrepayment ? prepaymentMessage.trim() : null,
       }
       if (settings?.id) payload.id = settings.id
 
@@ -606,6 +612,42 @@ export default function Configuracion() {
                       ))}
                     </div>
                     <p className="text-xs text-gray-400">El cliente verá este porcentaje antes de confirmar su reserva.</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Política de pago personalizada */}
+              <div className="border border-gray-200 rounded-xl overflow-hidden">
+                <div className="flex items-center justify-between gap-3 px-4 py-3.5 bg-gray-50">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-gray-900">Política de pago</p>
+                    <p className="text-xs text-gray-500 mt-0.5">Muestra un mensaje de pago personalizado en el email de confirmación.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setRequiresPrepayment(v => !v)}
+                    className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
+                      requiresPrepayment ? 'bg-indigo-500' : 'bg-gray-300'
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                      requiresPrepayment ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
+                </div>
+
+                {requiresPrepayment && (
+                  <div className="px-4 py-4 border-t border-gray-100 space-y-2">
+                    <Label>Mensaje para el cliente</Label>
+                    <textarea
+                      value={prepaymentMessage}
+                      onChange={e => setPrepaymentMessage(e.target.value)}
+                      placeholder="Ej: Se requiere el 50% de anticipo. Nos pondremos en contacto contigo."
+                      rows={3}
+                      maxLength={300}
+                      className="input w-full resize-none"
+                    />
+                    <p className="text-right text-xs text-gray-400">{prepaymentMessage.length}/300</p>
                   </div>
                 )}
               </div>

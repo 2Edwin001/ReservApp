@@ -10,11 +10,11 @@ import { es } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight, Loader2, UtensilsCrossed, Check } from 'lucide-react'
 
 // ─── email ────────────────────────────────────────────────────────────────────
-async function sendConfirmationEmail({ client_name, client_email, restaurant_name, date, time, people, code }) {
+async function sendConfirmationEmail({ client_name, client_email, restaurant_name, date, time, people, code, requires_prepayment, prepayment_message }) {
   const { data, error } = await supabase.functions.invoke('smart-endpoint', {
     body: {
       type: 'confirmation',
-      reservation: { client_name, client_email, restaurant_name, date, time, people, code },
+      reservation: { client_name, client_email, restaurant_name, date, time, people, code, requires_prepayment, prepayment_message },
     },
   })
   if (error) throw new Error(error.message)
@@ -392,13 +392,15 @@ function CustomerForm({ restaurant, settings, date, time, businessType, onBack }
 
       const code = data.id.slice(0, 8).toUpperCase()
       sendConfirmationEmail({
-        client_name:     data.client_name,
-        client_email:    data.client_email,
-        restaurant_name: restaurant.name,
-        date:            data.date,
-        time:            data.time.slice(0, 5),
-        people:          data.people,
+        client_name:         data.client_name,
+        client_email:        data.client_email,
+        restaurant_name:     restaurant.name,
+        date:                data.date,
+        time:                data.time.slice(0, 5),
+        people:              data.people,
         code,
+        requires_prepayment: settings?.requires_prepayment ?? false,
+        prepayment_message:  settings?.prepayment_message ?? '',
       })
         .then(() => console.log('[send-email] enviado ok'))
         .catch(err => {

@@ -68,6 +68,13 @@ Deno.serve(async (req) => {
                 </table>
               </div>
 
+              ${reservation.requires_prepayment && reservation.prepayment_message ? `
+              <!-- Prepayment notice -->
+              <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:16px;margin-bottom:24px">
+                <p style="color:#92400e;font-size:13px;font-weight:700;margin:0 0 6px">⚠️ Información de pago</p>
+                <p style="color:#78350f;font-size:13px;margin:0;line-height:1.6">${reservation.prepayment_message}</p>
+              </div>` : ''}
+
               <p style="color:#374151;font-size:14px;margin:0 0 28px;line-height:1.6">
                 ¡Te esperamos! Si necesitás cancelar o modificar tu reserva,
                 contactá directamente al negocio.
