@@ -283,8 +283,13 @@ export default function Configuracion() {
 
     if (checkError) { showToast('error', checkError.message); return }
 
+    if (count === null) {
+      showToast('error', 'No se pudo verificar las reservas de esta mesa. Inténtalo de nuevo.')
+      return
+    }
+
     if (count > 0) {
-      showToast('error', 'No puedes eliminar esta mesa porque tiene reservas asociadas')
+      showToast('error', 'No puedes eliminar esta mesa porque tiene reservas asociadas.')
       return
     }
 
