@@ -68,6 +68,13 @@ Deno.serve(async (req) => {
                 </table>
               </div>
 
+              ${Number(reservation.deposit_percentage) > 0 ? `
+              <!-- Deposit notice -->
+              <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:16px;margin-bottom:24px">
+                <p style="color:#92400e;font-size:13px;font-weight:700;margin:0 0 6px">💳 Depósito requerido: ${reservation.deposit_percentage}%</p>
+                <p style="color:#78350f;font-size:13px;margin:0;line-height:1.6">El negocio se pondrá en contacto contigo para coordinar el pago anticipado antes de tu reserva.</p>
+              </div>` : ''}
+
               ${reservation.requires_prepayment && reservation.prepayment_message ? `
               <!-- Prepayment notice -->
               <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:16px;margin-bottom:24px">
