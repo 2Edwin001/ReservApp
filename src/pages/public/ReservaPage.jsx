@@ -309,11 +309,47 @@ function SlotsStep({ restaurant, settings, date, businessType, onSelect, onBack 
 // ─── Step 3 — Customer form ───────────────────────────────────────────────────
 function CustomerForm({ restaurant, settings, date, time, businessType, onBack }) {
   const navigate = useNavigate()
-  const range = capacityRange(businessType)
+  const range     = capacityRange(businessType)
+  const singLabel = unitLabel(businessType, 'singular')
+  const plurLabel = unitLabel(businessType, 'plural').toLowerCase()
   const depositPct = settings?.requires_deposit ? (settings.deposit_percentage ?? 0) : 0
-  const [form, setForm] = useState({ name: '', email: '', phone: '', people: range.min, notes: '' })
-  const [submitting, setSubmitting] = useState(false)
-  const [error, setError] = useState('')
+
+  const [form, setForm]               = useState({ name: '', email: '', phone: '', people: range.min, notes: '' })
+  const [submitting, setSubmitting]   = useState(false)
+  const [error, setError]             = useState('')
+  const [availableTables, setAvailableTables] = useState([])
+  const [loadingTables, setLoadingTables]     = useState(true)
+  const [selectedTable, setSelectedTable]     = useState(null)
+
+  // Load free resources for this date+time on mount
+  useEffect(() => {
+    async function loadAvailable() {
+      setLoadingTables(true)
+      try {
+        const dateStr = format(date, 'yyyy-MM-dd')
+        const timeStr = time + ':00'
+        const [{ data: active }, { data: booked }] = await Promise.all([
+          supabase.from('resources').select('id, name, number, capacity').eq('restaurant_id', restaurant.id).neq('is_active', false).order('number'),
+          supabase.from('reservations').select('table_id').eq('restaurant_id', restaurant.id).eq('date', dateStr).eq('time', timeStr).neq('status', 'cancelled'),
+        ])
+        const bookedIds = new Set((booked ?? []).map(r => r.table_id))
+        setAvailableTables((active ?? []).filter(t => !bookedIds.has(t.id)))
+      } catch (err) {
+        console.error('[loadAvailable]', err)
+      } finally {
+        setLoadingTables(false)
+      }
+    }
+    loadAvailable()
+  }, [])
+
+  // Tables that fit the current people count
+  const fittingTables = availableTables.filter(t => t.capacity >= form.people)
+
+  // Clear selection if it no longer fits after people change
+  useEffect(() => {
+    if (selectedTable && selectedTable.capacity < form.people) setSelectedTable(null)
+  }, [form.people])
 
   function set(field, value) {
     setForm(prev => ({ ...prev, [field]: value }))
@@ -322,52 +358,43 @@ function CustomerForm({ restaurant, settings, date, time, businessType, onBack }
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
-    setSubmitting(true)
 
+    if (!selectedTable) {
+      setError(`Seleccioná ${singLabel.toLowerCase()} para continuar.`)
+      return
+    }
+
+    setSubmitting(true)
     try {
       const dateStr = format(date, 'yyyy-MM-dd')
       const timeStr = time + ':00'
 
-      const [
-        { data: activeTables, error: tablesErr },
-        { data: booked,       error: bookedErr },
-      ] = await Promise.all([
-        supabase
-          .from('resources')
-          .select('id, name, number, capacity')
-          .eq('restaurant_id', restaurant.id)
-          .neq('is_active', false),
-        supabase
-          .from('reservations')
-          .select('table_id')
-          .eq('restaurant_id', restaurant.id)
-          .eq('date', dateStr)
-          .eq('time', timeStr)
-          .neq('status', 'cancelled'),
-      ])
+      // Re-verify the chosen resource is still free (race condition guard)
+      const { data: recheck } = await supabase
+        .from('reservations')
+        .select('id')
+        .eq('table_id', selectedTable.id)
+        .eq('date', dateStr)
+        .eq('time', timeStr)
+        .neq('status', 'cancelled')
 
-      if (tablesErr) throw tablesErr
-      if (bookedErr) throw bookedErr
-
-      const bookedIds  = new Set((booked ?? []).map(r => r.table_id))
-      const freeTables = (activeTables ?? []).filter(t => !bookedIds.has(t.id))
-      const freeTable  = freeTables.find(t => t.capacity >= form.people)
-
-      if (!freeTable) {
-        const maxAvailable = freeTables.length > 0 ? Math.max(...freeTables.map(t => t.capacity)) : 0
-        const plur = unitLabel(businessType, 'plural').toLowerCase()
-        setError(
-          freeTables.length === 0
-            ? `No hay ${plur} disponibles para este horario. Elige otro.`
-            : `No hay ${plur} con capacidad para ${form.people} personas. El máximo disponible es ${maxAvailable}.`
-        )
+      if (recheck && recheck.length > 0) {
+        setError(`Esta ${singLabel.toLowerCase()} acaba de ser reservada. Por favor elegí otra.`)
+        // Refresh available list
+        const [{ data: active }, { data: booked }] = await Promise.all([
+          supabase.from('resources').select('id, name, number, capacity').eq('restaurant_id', restaurant.id).neq('is_active', false).order('number'),
+          supabase.from('reservations').select('table_id').eq('restaurant_id', restaurant.id).eq('date', dateStr).eq('time', timeStr).neq('status', 'cancelled'),
+        ])
+        const bookedIds = new Set((booked ?? []).map(r => r.table_id))
+        setAvailableTables((active ?? []).filter(t => !bookedIds.has(t.id)))
+        setSelectedTable(null)
         setSubmitting(false)
         return
       }
 
       const payload = {
         restaurant_id: restaurant.id,
-        table_id:      freeTable.id,
+        table_id:      selectedTable.id,
         date:          dateStr,
         time:          timeStr,
         client_name:   form.name,
@@ -384,11 +411,7 @@ function CustomerForm({ restaurant, settings, date, time, businessType, onBack }
         .select()
         .single()
 
-      if (insertErr) {
-        console.error('Error completo:', JSON.stringify(insertErr, null, 2))
-        console.error('Payload enviado:', JSON.stringify(payload, null, 2))
-        throw insertErr
-      }
+      if (insertErr) throw insertErr
 
       const code = data.id.slice(0, 8).toUpperCase()
       sendConfirmationEmail({
@@ -404,16 +427,13 @@ function CustomerForm({ restaurant, settings, date, time, businessType, onBack }
         prepayment_message:  settings?.prepayment_message ?? '',
       })
         .then(() => console.log('[send-email] enviado ok'))
-        .catch(err => {
-          console.error('[send-email] error:', err.message)
-          setError(`Reserva confirmada, pero el email falló: ${err.message}`)
-        })
+        .catch(err => console.error('[send-email] error:', err.message))
 
       navigate(`/r/${restaurant.slug}/confirmacion`, {
         state: {
           reservation: data,
           restaurant,
-          resource_name: freeTable.name || `${unitLabel(restaurant.business_type, 'singular')} ${freeTable.number}`,
+          resource_name: selectedTable.name || `${singLabel} ${selectedTable.number}`,
           deposit_percentage: depositPct,
         },
       })
@@ -493,6 +513,53 @@ function CustomerForm({ restaurant, settings, date, time, businessType, onBack }
         </div>
       </div>
 
+      {/* ── Resource selector ── */}
+      <div>
+        <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">
+          Elegí {singLabel.toLowerCase()} *
+        </label>
+        {loadingTables ? (
+          <div className="flex items-center gap-2 text-gray-400 text-sm py-3">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Consultando disponibilidad...
+          </div>
+        ) : fittingTables.length === 0 ? (
+          <div className="bg-red-50 border border-red-200 rounded-xl px-3.5 py-3">
+            <p className="text-sm text-red-600">
+              {availableTables.length === 0
+                ? `No hay ${plurLabel} disponibles para este horario.`
+                : `No hay ${plurLabel} con capacidad para ${form.people} personas.`}
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-2">
+            {fittingTables.map(t => {
+              const label = t.name || `${singLabel} ${t.number}`
+              const isSelected = selectedTable?.id === t.id
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setSelectedTable(t)}
+                  className={`p-3 rounded-xl border-2 text-left transition-all ${
+                    isSelected
+                      ? 'border-indigo-500 bg-indigo-50'
+                      : 'border-gray-200 bg-white hover:border-indigo-300 hover:bg-indigo-50/40'
+                  }`}
+                >
+                  <p className={`text-sm font-semibold leading-tight ${isSelected ? 'text-indigo-700' : 'text-gray-800'}`}>
+                    {label}
+                  </p>
+                  <p className={`text-xs mt-0.5 ${isSelected ? 'text-indigo-500' : 'text-gray-400'}`}>
+                    hasta {t.capacity} {t.capacity === 1 ? 'persona' : 'personas'}
+                  </p>
+                </button>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
       <div>
         <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wide">
           Nota especial <span className="text-gray-400 normal-case font-normal">(opcional)</span>
@@ -534,7 +601,7 @@ function CustomerForm({ restaurant, settings, date, time, businessType, onBack }
         </button>
         <button
           type="submit"
-          disabled={submitting}
+          disabled={submitting || fittingTables.length === 0}
           className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm font-semibold rounded-xl transition-all shadow-md shadow-indigo-100 disabled:shadow-none flex items-center justify-center gap-2"
         >
           {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
