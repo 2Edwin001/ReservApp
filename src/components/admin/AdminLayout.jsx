@@ -2,7 +2,7 @@ import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
 import { LayoutDashboard, CalendarDays, Settings, LogOut, UtensilsCrossed, BarChart2, Sun, Moon } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useRestaurant } from '../../hooks/useRestaurant'
-import { useTheme } from '../../hooks/useTheme'
+import { useTheme } from '../../hooks/useTheme.jsx'
 
 const NAV_ITEMS = [
   { href: '/admin/dashboard',     icon: LayoutDashboard, label: 'Dashboard' },

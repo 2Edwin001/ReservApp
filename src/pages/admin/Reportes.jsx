@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useRestaurant } from '../../hooks/useRestaurant'
-import { useTheme } from '../../hooks/useTheme'
+import { useTheme } from '../../hooks/useTheme.jsx'
 import { format, startOfMonth, endOfMonth, getDaysInMonth, subMonths, addMonths } from 'date-fns'
 import { es } from 'date-fns/locale'
 import {

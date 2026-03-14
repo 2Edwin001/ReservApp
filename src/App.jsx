@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { ThemeProvider } from './hooks/useTheme'
+import { ThemeProvider } from './hooks/useTheme.jsx'
 import ProtectedRoute from './components/ProtectedRoute'
 import AdminLayout from './components/admin/AdminLayout'
 import Login from './pages/admin/Login'
