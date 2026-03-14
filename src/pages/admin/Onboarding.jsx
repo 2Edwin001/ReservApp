@@ -98,6 +98,7 @@ export default function Onboarding() {
   // ── Paso 1: guardar settings ──────────────────────────────────────────────
   async function saveSettings() {
     if (openDays.length === 0) { setError('Selecciona al menos un día de apertura.'); return }
+    if (closeTime <= openTime) { setError('El horario de cierre debe ser posterior al de apertura.'); return }
     setSaving(true); setError(null)
     try {
       const { error: err } = await supabase.from('settings').insert({
@@ -122,11 +123,17 @@ export default function Onboarding() {
   function addResource() {
     const trimmed = newName.trim()
     if (!trimmed) return
+    const range    = capacityRange(restaurant?.business_type)
+    const capacity = Number(newCapacity)
+    if (!capacity || capacity < range.min || capacity > range.max) {
+      setError(`La capacidad debe estar entre ${range.min} y ${range.max} personas.`)
+      return
+    }
     if (resources.find(r => r.name.toLowerCase() === trimmed.toLowerCase())) {
       setError(`Ya existe un ${unitLabel(restaurant?.business_type, 'singular').toLowerCase()} con ese nombre.`)
       return
     }
-    setResources(prev => [...prev, { name: trimmed, capacity: newCapacity }])
+    setResources(prev => [...prev, { name: trimmed, capacity }])
     setNewName('')
     setError(null)
   }
@@ -395,7 +402,17 @@ export default function Onboarding() {
                           value={newCapacity}
                           min={range.min}
                           max={range.max}
-                          onChange={e => setNewCapacity(Math.min(range.max, Math.max(range.min, Number(e.target.value))))}
+                          onChange={e => {
+                            const raw = e.target.value
+                            if (raw === '') { setNewCapacity(''); return }
+                            const num = parseInt(raw, 10)
+                            if (!isNaN(num)) setNewCapacity(Math.min(range.max, Math.max(range.min, num)))
+                          }}
+                          onBlur={() => {
+                            const n = Number(newCapacity)
+                            if (!n || n < range.min) setNewCapacity(range.min)
+                            else if (n > range.max) setNewCapacity(range.max)
+                          }}
                           placeholder="Cap."
                           className="flex-1 bg-gray-800 border border-gray-700 text-white placeholder-gray-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
                         />

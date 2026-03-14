@@ -16,7 +16,6 @@ Deno.serve(async (req) => {
     const body = await req.json()
     const { type, reservation } = body
 
-    // ── Log 1: payload received ───────────────────────────────────────────────
     console.log('[smart-endpoint] payload recibido:', JSON.stringify({
       type,
       to: reservation?.client_email,
@@ -24,86 +23,116 @@ Deno.serve(async (req) => {
       has_api_key: !!Deno.env.get('RESEND_API_KEY'),
     }))
 
+    // ── Confirmation email ────────────────────────────────────────────────────
     if (type === 'confirmation') {
       const sendResult = await resend.emails.send({
         from: 'ReservApp <reservas@reservapp.space>',
         to: [reservation.client_email],
         subject: `✅ Reserva confirmada en ${reservation.restaurant_name}`,
         html: `
-          <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,sans-serif;max-width:520px;margin:0 auto;background:#f3f4f6;padding:24px 16px">
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background-color:#f1f5f9">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f1f5f9" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">
+  <tr>
+    <td align="center" style="padding:32px 16px">
 
-            <!-- Header -->
-            <div style="background:linear-gradient(135deg,#6366f1 0%,#4f46e5 100%);border-radius:16px 16px 0 0;padding:36px 32px 32px;text-align:center">
-              <div style="font-size:44px;line-height:1;margin-bottom:12px">✅</div>
-              <h1 style="color:white;margin:0;font-size:22px;font-weight:700;letter-spacing:-0.3px">¡Reserva confirmada!</h1>
-              <p style="color:rgba(255,255,255,0.75);margin:8px 0 0;font-size:14px">${reservation.restaurant_name}</p>
-            </div>
+      <!-- Card -->
+      <table width="520" cellpadding="0" cellspacing="0" border="0" style="max-width:520px;width:100%">
 
-            <!-- Body -->
-            <div style="background:white;padding:32px;border-radius:0 0 16px 16px;box-shadow:0 4px 24px rgba(0,0,0,0.07)">
-              <p style="color:#374151;font-size:15px;margin:0 0 24px;line-height:1.6">
-                Hola <strong>${reservation.client_name}</strong>, tu reserva quedó confirmada.
-                Guardá este resumen:
-              </p>
+        <!-- Header -->
+        <tr>
+          <td bgcolor="#4f46e5" style="background-color:#4f46e5;padding:36px 32px 32px;text-align:center;border-radius:16px 16px 0 0">
+            <div style="font-size:44px;line-height:1;margin-bottom:14px">✅</div>
+            <h1 style="color:#ffffff;margin:0;font-size:22px;font-weight:700;letter-spacing:-0.3px">¡Reserva confirmada!</h1>
+            <p style="color:rgba(255,255,255,0.70);margin:8px 0 0;font-size:14px">${reservation.restaurant_name}</p>
+          </td>
+        </tr>
 
-              <!-- Details -->
-              <div style="background:#f9fafb;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;margin-bottom:24px">
-                <table style="width:100%;border-collapse:collapse">
-                  <tr style="border-bottom:1px solid #e5e7eb">
-                    <td style="padding:13px 16px;color:#6b7280;font-size:13px;width:42%">📅 Fecha</td>
-                    <td style="padding:13px 16px;font-weight:600;color:#111827;font-size:13px">${reservation.date}</td>
-                  </tr>
-                  <tr style="border-bottom:1px solid #e5e7eb">
-                    <td style="padding:13px 16px;color:#6b7280;font-size:13px">🕐 Hora</td>
-                    <td style="padding:13px 16px;font-weight:600;color:#111827;font-size:13px">${reservation.time}</td>
-                  </tr>
-                  <tr style="border-bottom:1px solid #e5e7eb">
-                    <td style="padding:13px 16px;color:#6b7280;font-size:13px">👥 Personas</td>
-                    <td style="padding:13px 16px;font-weight:600;color:#111827;font-size:13px">${reservation.people} ${Number(reservation.people) === 1 ? 'persona' : 'personas'}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding:13px 16px;color:#6b7280;font-size:13px">🔑 Código</td>
-                    <td style="padding:13px 16px;font-weight:700;color:#6366f1;font-size:18px;letter-spacing:4px">${reservation.code}</td>
-                  </tr>
-                </table>
-              </div>
+        <!-- White body -->
+        <tr>
+          <td bgcolor="#ffffff" style="background-color:#ffffff;border-radius:0 0 16px 16px;padding:32px">
 
-              ${Number(reservation.deposit_percentage) > 0 ? `
-              <!-- Deposit notice -->
-              <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:16px;margin-bottom:24px">
-                <p style="color:#92400e;font-size:13px;font-weight:700;margin:0 0 6px">💳 Depósito requerido: ${reservation.deposit_percentage}%</p>
-                <p style="color:#78350f;font-size:13px;margin:0;line-height:1.6">El negocio se pondrá en contacto contigo para coordinar el pago anticipado antes de tu reserva.</p>
-              </div>` : ''}
+            <!-- Greeting -->
+            <p style="color:#374151;font-size:15px;margin:0 0 24px;line-height:1.6">
+              Hola <strong style="color:#111827">${reservation.client_name}</strong>,
+              tu reserva quedó confirmada. Guardá este resumen.
+            </p>
 
-              ${reservation.requires_prepayment && reservation.prepayment_message ? `
-              <!-- Prepayment notice -->
-              <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:16px;margin-bottom:24px">
-                <p style="color:#92400e;font-size:13px;font-weight:700;margin:0 0 6px">⚠️ Información de pago</p>
-                <p style="color:#78350f;font-size:13px;margin:0;line-height:1.6">${reservation.prepayment_message}</p>
-              </div>` : ''}
+            <!-- Code highlight -->
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px">
+              <tr>
+                <td bgcolor="#eef2ff" style="background-color:#eef2ff;border:1px solid #c7d2fe;border-radius:12px;padding:18px 16px;text-align:center">
+                  <p style="color:#6366f1;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:2.5px;margin:0 0 8px">Código de reserva</p>
+                  <p style="color:#3730a3;font-size:30px;font-weight:700;letter-spacing:7px;margin:0;font-family:'Courier New',Courier,monospace">${reservation.code}</p>
+                </td>
+              </tr>
+            </table>
 
-              <p style="color:#374151;font-size:14px;margin:0 0 28px;line-height:1.6">
-                ¡Te esperamos! Si necesitás cancelar o modificar tu reserva,
-                contactá directamente al negocio.
-              </p>
+            <!-- Details -->
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e2e8f0;border-radius:10px;border-collapse:separate;border-spacing:0;margin-bottom:24px">
+              <tr>
+                <td bgcolor="#f8fafc" style="background-color:#f8fafc;padding:13px 16px;color:#6b7280;font-size:13px;width:42%;border-bottom:1px solid #e2e8f0">📅 Fecha</td>
+                <td bgcolor="#f8fafc" style="background-color:#f8fafc;padding:13px 16px;font-weight:600;color:#111827;font-size:13px;border-bottom:1px solid #e2e8f0">${reservation.date}</td>
+              </tr>
+              <tr>
+                <td style="padding:13px 16px;color:#6b7280;font-size:13px;border-bottom:1px solid #e2e8f0">🕐 Hora</td>
+                <td style="padding:13px 16px;font-weight:600;color:#111827;font-size:13px;border-bottom:1px solid #e2e8f0">${reservation.time}</td>
+              </tr>
+              <tr>
+                <td bgcolor="#f8fafc" style="background-color:#f8fafc;padding:13px 16px;color:#6b7280;font-size:13px;border-bottom:1px solid #e2e8f0">👥 Personas</td>
+                <td bgcolor="#f8fafc" style="background-color:#f8fafc;padding:13px 16px;font-weight:600;color:#111827;font-size:13px;border-bottom:1px solid #e2e8f0">${reservation.people} ${Number(reservation.people) === 1 ? 'persona' : 'personas'}</td>
+              </tr>
+            </table>
 
-              <!-- Footer -->
-              <div style="border-top:1px solid #e5e7eb;padding-top:20px;text-align:center">
-                <p style="color:#9ca3af;font-size:12px;margin:0;line-height:1.6">
-                  Enviado por <strong style="color:#6366f1">ReservApp</strong><br>
-                  Si no realizaste esta reserva, ignorá este email.
-                </p>
-              </div>
-            </div>
+            ${Number(reservation.deposit_percentage) > 0 || (reservation.requires_prepayment && reservation.prepayment_message) ? `
+            <!-- Payment notice (unified) -->
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px">
+              <tr>
+                <td bgcolor="#fffbeb" style="background-color:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px 16px">
+                  <p style="color:#92400e;font-size:13px;font-weight:700;margin:0 0 5px">💳 Información de pago</p>
+                  ${Number(reservation.deposit_percentage) > 0 ? `<p style="color:#78350f;font-size:13px;margin:0 0 ${reservation.requires_prepayment && reservation.prepayment_message ? '8px' : '0'};line-height:1.5">Se requiere un depósito del <strong>${reservation.deposit_percentage}%</strong> para confirmar tu reserva.</p>` : ''}
+                  ${reservation.requires_prepayment && reservation.prepayment_message ? `<p style="color:#78350f;font-size:13px;margin:0;line-height:1.5">${reservation.prepayment_message}</p>` : ''}
+                </td>
+              </tr>
+            </table>` : ''}
 
-          </div>
+            <!-- Closing message -->
+            <p style="color:#6b7280;font-size:14px;margin:0 0 24px;line-height:1.6">
+              ¡Te esperamos! Si necesitás cancelar o modificar tu reserva,
+              contactá directamente al negocio.
+            </p>
+
+            <!-- Footer -->
+            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="border-top:1px solid #f3f4f6;padding-top:18px;text-align:center">
+                  <p style="color:#d1d5db;font-size:12px;margin:0;line-height:1.6">
+                    Enviado por <strong style="color:#6366f1">ReservApp</strong>
+                    &nbsp;·&nbsp;
+                    Si no realizaste esta reserva, ignorá este email.
+                  </p>
+                </td>
+              </tr>
+            </table>
+
+          </td>
+        </tr>
+
+      </table>
+      <!-- /Card -->
+
+    </td>
+  </tr>
+</table>
+</body>
+</html>
         `,
       })
 
-      // ── Log 2: Resend response ──────────────────────────────────────────────
       console.log('[smart-endpoint] respuesta Resend:', JSON.stringify(sendResult))
 
-      // ── Log 3: Resend error inside response object ──────────────────────────
       if (sendResult.error) {
         console.error('[smart-endpoint] Resend error:', JSON.stringify(sendResult.error))
         return new Response(
@@ -115,77 +144,104 @@ Deno.serve(async (req) => {
       console.log('[smart-endpoint] email enviado, id:', sendResult.data?.id)
     }
 
+    // ── Admin notification ────────────────────────────────────────────────────
     if (type === 'admin_notification' && reservation.admin_email) {
       const adminResult = await resend.emails.send({
         from: 'ReservApp <reservas@reservapp.space>',
         to: [reservation.admin_email],
         subject: `🔔 Nueva reserva de ${reservation.client_name}`,
         html: `
-          <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,sans-serif;max-width:520px;margin:0 auto;background:#f3f4f6;padding:24px 16px">
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background-color:#f1f5f9">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f1f5f9" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">
+  <tr>
+    <td align="center" style="padding:32px 16px">
 
-            <!-- Header -->
-            <div style="background:linear-gradient(135deg,#1e1b4b 0%,#312e81 100%);border-radius:16px 16px 0 0;padding:32px;text-align:center">
-              <div style="font-size:40px;line-height:1;margin-bottom:10px">🔔</div>
-              <h1 style="color:white;margin:0;font-size:20px;font-weight:700">Nueva reserva recibida</h1>
-              <p style="color:rgba(255,255,255,0.65);margin:8px 0 0;font-size:13px">${reservation.restaurant_name}</p>
-            </div>
+      <!-- Card -->
+      <table width="520" cellpadding="0" cellspacing="0" border="0" style="max-width:520px;width:100%">
 
-            <!-- Body -->
-            <div style="background:white;padding:32px;border-radius:0 0 16px 16px;box-shadow:0 4px 24px rgba(0,0,0,0.07)">
+        <!-- Header -->
+        <tr>
+          <td bgcolor="#1e1b4b" style="background-color:#1e1b4b;padding:32px;text-align:center;border-radius:16px 16px 0 0">
+            <div style="font-size:40px;line-height:1;margin-bottom:12px">🔔</div>
+            <h1 style="color:#ffffff;margin:0;font-size:20px;font-weight:700">Nueva reserva recibida</h1>
+            <p style="color:rgba(255,255,255,0.60);margin:8px 0 0;font-size:13px">${reservation.restaurant_name}</p>
+          </td>
+        </tr>
 
-              <!-- Client info -->
-              <p style="color:#6b7280;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;margin:0 0 10px">Cliente</p>
-              <div style="background:#f9fafb;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;margin-bottom:20px">
-                <table style="width:100%;border-collapse:collapse">
-                  <tr style="border-bottom:1px solid #e5e7eb">
-                    <td style="padding:12px 16px;color:#6b7280;font-size:13px;width:42%">👤 Nombre</td>
-                    <td style="padding:12px 16px;font-weight:600;color:#111827;font-size:13px">${reservation.client_name}</td>
-                  </tr>
-                  <tr style="border-bottom:1px solid #e5e7eb">
-                    <td style="padding:12px 16px;color:#6b7280;font-size:13px">📧 Email</td>
-                    <td style="padding:12px 16px;color:#111827;font-size:13px">${reservation.client_email}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding:12px 16px;color:#6b7280;font-size:13px">📱 Teléfono</td>
-                    <td style="padding:12px 16px;color:#111827;font-size:13px">${reservation.client_phone ?? '—'}</td>
-                  </tr>
-                </table>
-              </div>
+        <!-- White body -->
+        <tr>
+          <td bgcolor="#ffffff" style="background-color:#ffffff;border-radius:0 0 16px 16px;padding:28px 32px 32px">
 
-              <!-- Reservation info -->
-              <p style="color:#6b7280;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px;margin:0 0 10px">Reserva</p>
-              <div style="background:#f9fafb;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;margin-bottom:24px">
-                <table style="width:100%;border-collapse:collapse">
-                  <tr style="border-bottom:1px solid #e5e7eb">
-                    <td style="padding:12px 16px;color:#6b7280;font-size:13px;width:42%">📅 Fecha</td>
-                    <td style="padding:12px 16px;font-weight:600;color:#111827;font-size:13px">${reservation.date}</td>
-                  </tr>
-                  <tr style="border-bottom:1px solid #e5e7eb">
-                    <td style="padding:12px 16px;color:#6b7280;font-size:13px">🕐 Hora</td>
-                    <td style="padding:12px 16px;font-weight:600;color:#111827;font-size:13px">${reservation.time}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding:12px 16px;color:#6b7280;font-size:13px">👥 Personas</td>
-                    <td style="padding:12px 16px;font-weight:600;color:#111827;font-size:13px">${reservation.people} ${Number(reservation.people) === 1 ? 'persona' : 'personas'}</td>
-                  </tr>
-                </table>
-              </div>
+            <!-- Section: Cliente -->
+            <p style="color:#9ca3af;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin:0 0 10px">Cliente</p>
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e2e8f0;border-radius:10px;border-collapse:separate;border-spacing:0;margin-bottom:20px">
+              <tr>
+                <td bgcolor="#f8fafc" style="background-color:#f8fafc;padding:12px 16px;color:#6b7280;font-size:13px;width:38%;border-bottom:1px solid #e2e8f0">👤 Nombre</td>
+                <td bgcolor="#f8fafc" style="background-color:#f8fafc;padding:12px 16px;font-weight:600;color:#111827;font-size:13px;border-bottom:1px solid #e2e8f0">${reservation.client_name}</td>
+              </tr>
+              <tr>
+                <td style="padding:12px 16px;color:#6b7280;font-size:13px;border-bottom:1px solid #e2e8f0">📧 Email</td>
+                <td style="padding:12px 16px;color:#111827;font-size:13px;border-bottom:1px solid #e2e8f0">${reservation.client_email}</td>
+              </tr>
+              <tr>
+                <td bgcolor="#f8fafc" style="background-color:#f8fafc;padding:12px 16px;color:#6b7280;font-size:13px">📱 Teléfono</td>
+                <td bgcolor="#f8fafc" style="background-color:#f8fafc;padding:12px 16px;color:#111827;font-size:13px">${reservation.client_phone ?? '—'}</td>
+              </tr>
+            </table>
 
-              ${reservation.notes ? `
-              <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:14px 16px;margin-bottom:24px">
-                <p style="color:#92400e;font-size:12px;font-weight:600;margin:0 0 4px;text-transform:uppercase;letter-spacing:0.5px">📝 Nota del cliente</p>
-                <p style="color:#78350f;font-size:14px;margin:0">${reservation.notes}</p>
-              </div>` : ''}
+            <!-- Section: Reserva -->
+            <p style="color:#9ca3af;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin:0 0 10px">Reserva</p>
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e2e8f0;border-radius:10px;border-collapse:separate;border-spacing:0;margin-bottom:${reservation.notes ? '20px' : '24px'}">
+              <tr>
+                <td bgcolor="#f8fafc" style="background-color:#f8fafc;padding:12px 16px;color:#6b7280;font-size:13px;width:38%;border-bottom:1px solid #e2e8f0">📅 Fecha</td>
+                <td bgcolor="#f8fafc" style="background-color:#f8fafc;padding:12px 16px;font-weight:600;color:#111827;font-size:13px;border-bottom:1px solid #e2e8f0">${reservation.date}</td>
+              </tr>
+              <tr>
+                <td style="padding:12px 16px;color:#6b7280;font-size:13px;border-bottom:1px solid #e2e8f0">🕐 Hora</td>
+                <td style="padding:12px 16px;font-weight:600;color:#111827;font-size:13px;border-bottom:1px solid #e2e8f0">${reservation.time}</td>
+              </tr>
+              <tr>
+                <td bgcolor="#f8fafc" style="background-color:#f8fafc;padding:12px 16px;color:#6b7280;font-size:13px">👥 Personas</td>
+                <td bgcolor="#f8fafc" style="background-color:#f8fafc;padding:12px 16px;font-weight:600;color:#111827;font-size:13px">${reservation.people} ${Number(reservation.people) === 1 ? 'persona' : 'personas'}</td>
+              </tr>
+            </table>
 
-              <!-- Footer -->
-              <div style="border-top:1px solid #e5e7eb;padding-top:20px;text-align:center">
-                <p style="color:#9ca3af;font-size:12px;margin:0">
-                  <strong style="color:#6366f1">ReservApp</strong> · Sistema de reservas online
-                </p>
-              </div>
-            </div>
+            ${reservation.notes ? `
+            <!-- Client note -->
+            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px">
+              <tr>
+                <td bgcolor="#fffbeb" style="background-color:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px 16px">
+                  <p style="color:#92400e;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;margin:0 0 5px">📝 Nota del cliente</p>
+                  <p style="color:#78350f;font-size:13px;margin:0;line-height:1.5">${reservation.notes}</p>
+                </td>
+              </tr>
+            </table>` : ''}
 
-          </div>
+            <!-- Footer -->
+            <table width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td style="border-top:1px solid #f3f4f6;padding-top:18px;text-align:center">
+                  <p style="color:#d1d5db;font-size:12px;margin:0">
+                    <strong style="color:#6366f1">ReservApp</strong> · Sistema de reservas online
+                  </p>
+                </td>
+              </tr>
+            </table>
+
+          </td>
+        </tr>
+
+      </table>
+      <!-- /Card -->
+
+    </td>
+  </tr>
+</table>
+</body>
+</html>
         `,
       })
       console.log('[smart-endpoint] admin notification:', JSON.stringify(adminResult))

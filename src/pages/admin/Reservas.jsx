@@ -7,9 +7,9 @@ import { Search, CheckCheck, X, Loader2, CalendarDays, Users, LayoutGrid, Messag
 import { unitLabel } from '../../lib/businessTypes'
 
 const STATUS = {
-  confirmed: { label: 'Confirmada', cls: 'bg-indigo-50 text-indigo-700 border border-indigo-100' },
-  completed: { label: 'Completada', cls: 'bg-green-50 text-green-700 border border-green-100' },
-  cancelled: { label: 'Cancelada',  cls: 'bg-red-50 text-red-700 border border-red-100' },
+  confirmed: { label: 'Confirmada', cls: 'bg-indigo-50 text-indigo-700 border border-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-400 dark:border-indigo-500/20' },
+  completed: { label: 'Completada', cls: 'bg-green-50 text-green-700 border border-green-100 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20' },
+  cancelled: { label: 'Cancelada',  cls: 'bg-red-50 text-red-700 border border-red-100 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20' },
 }
 
 const STATUS_FILTERS = [
@@ -68,7 +68,7 @@ export default function Reservas() {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
-          <span className="text-sm text-gray-400">Cargando...</span>
+          <span className="text-sm text-gray-400 dark:text-gray-500">Cargando...</span>
         </div>
       </div>
     )
@@ -82,16 +82,16 @@ export default function Reservas() {
 
         {/* ── Header ── */}
         <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Reservas</h2>
-          <p className="text-gray-500 text-sm mt-1">{restaurant?.name}</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Reservas</h2>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{restaurant?.name}</p>
         </div>
 
         {/* ── Filters ── */}
-        <div className="bg-white border border-gray-200 rounded-2xl p-4 mb-6 space-y-3 shadow-sm">
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 mb-6 space-y-3 shadow-sm">
           <div className="flex flex-col sm:flex-row gap-3">
             {/* Date */}
             <div className="relative w-full sm:w-auto">
-              <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500 pointer-events-none" />
               <input
                 type="date"
                 value={date}
@@ -102,7 +102,7 @@ export default function Reservas() {
 
             {/* Search */}
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500 pointer-events-none" />
               <input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
@@ -113,7 +113,7 @@ export default function Reservas() {
           </div>
 
           {/* Status filters */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 bg-gray-100 rounded-xl p-1">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 bg-gray-100 dark:bg-gray-700 rounded-xl p-1">
             {STATUS_FILTERS.map(f => (
               <button
                 key={f.value}
@@ -121,7 +121,7 @@ export default function Reservas() {
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors whitespace-nowrap ${
                   statusFilter === f.value
                     ? 'bg-indigo-500 text-white shadow-sm'
-                    : 'text-gray-500 hover:text-gray-900 hover:bg-white'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-white dark:hover:bg-gray-600'
                 }`}
               >
                 {f.label}
@@ -134,22 +134,22 @@ export default function Reservas() {
         {loading ? (
           <div className="flex flex-col items-center gap-3 py-20">
             <Loader2 className="w-7 h-7 animate-spin text-indigo-500" />
-            <span className="text-sm text-gray-400">Cargando reservas...</span>
+            <span className="text-sm text-gray-400 dark:text-gray-500">Cargando reservas...</span>
           </div>
         ) : filtered.length === 0 ? (
           <EmptyState date={date} hasFilters={statusFilter !== 'all' || !!search} />
         ) : (
           <>
             {/* Result count */}
-            <p className="text-xs text-gray-500 mb-3 px-1">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 px-1">
               {filtered.length} reserva{filtered.length !== 1 ? 's' : ''} encontrada{filtered.length !== 1 ? 's' : ''}
             </p>
 
             {/* ── Desktop: table ── */}
-            <div className="hidden md:block overflow-x-auto rounded-2xl border border-gray-200 shadow-sm">
+            <div className="hidden md:block overflow-x-auto rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
               <table className="w-full text-sm min-w-[900px]">
                 <thead>
-                  <tr className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider border-b border-gray-100">
+                  <tr className="bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">
                     <th className="px-4 py-3 text-left">Hora</th>
                     <th className="px-4 py-3 text-left">Cliente</th>
                     <th className="px-4 py-3 text-left">Email</th>
@@ -161,19 +161,19 @@ export default function Reservas() {
                     <th className="px-4 py-3 text-right">Acciones</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 bg-white">
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-800">
                   {filtered.map(r => {
                     const s = STATUS[r.status] ?? STATUS.confirmed
                     return (
-                      <tr key={r.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-4 py-3 text-gray-900 font-bold tabular-nums">
+                      <tr key={r.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        <td className="px-4 py-3 text-gray-900 dark:text-white font-bold tabular-nums">
                           {r.time?.slice(0, 5)}
                         </td>
-                        <td className="px-4 py-3 text-gray-700 font-medium">{r.client_name}</td>
-                        <td className="px-4 py-3 text-gray-500 max-w-[160px] truncate">{r.client_email}</td>
-                        <td className="px-4 py-3 text-gray-500">{r.client_phone ?? '—'}</td>
-                        <td className="px-4 py-3 text-gray-500">{r.people}</td>
-                        <td className="px-4 py-3 text-gray-500">
+                        <td className="px-4 py-3 text-gray-700 dark:text-gray-300 font-medium">{r.client_name}</td>
+                        <td className="px-4 py-3 text-gray-500 dark:text-gray-400 max-w-[160px] truncate">{r.client_email}</td>
+                        <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{r.client_phone ?? '—'}</td>
+                        <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{r.people}</td>
+                        <td className="px-4 py-3 text-gray-500 dark:text-gray-400">
                           {r.resources?.name || (r.resources?.number != null ? `${unitLabel(restaurant?.business_type, 'singular')} ${r.resources.number}` : '—')}
                         </td>
                         <td className="px-4 py-3">
@@ -183,12 +183,12 @@ export default function Reservas() {
                         </td>
                         <td className="px-4 py-3">
                           {r.notes ? (
-                            <span title={r.notes} className="cursor-help inline-flex items-center gap-1.5 text-xs text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-1 rounded-lg max-w-[140px]">
+                            <span title={r.notes} className="cursor-help inline-flex items-center gap-1.5 text-xs text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 px-2 py-1 rounded-lg max-w-[140px]">
                               <MessageSquare className="w-3 h-3 shrink-0" />
                               <span className="truncate">{r.notes}</span>
                             </span>
                           ) : (
-                            <span className="text-gray-400 text-xs">—</span>
+                            <span className="text-gray-400 dark:text-gray-500 text-xs">—</span>
                           )}
                         </td>
                         <td className="px-4 py-3 text-right">
@@ -206,18 +206,18 @@ export default function Reservas() {
               {filtered.map(r => {
                 const s = STATUS[r.status] ?? STATUS.confirmed
                 return (
-                  <div key={r.id} className="bg-white border border-gray-200 rounded-2xl p-4 space-y-3 shadow-sm">
+                  <div key={r.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 space-y-3 shadow-sm">
                     {/* Top row: time + name + status */}
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-12 h-12 rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center shrink-0">
-                          <span className="text-gray-900 font-bold text-sm tabular-nums leading-none">
+                        <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 flex items-center justify-center shrink-0">
+                          <span className="text-gray-900 dark:text-white font-bold text-sm tabular-nums leading-none">
                             {r.time?.slice(0, 5)}
                           </span>
                         </div>
                         <div className="min-w-0">
-                          <p className="text-gray-900 font-semibold text-sm truncate">{r.client_name}</p>
-                          <p className="text-gray-500 text-xs truncate">{r.client_email}</p>
+                          <p className="text-gray-900 dark:text-white font-semibold text-sm truncate">{r.client_name}</p>
+                          <p className="text-gray-500 dark:text-gray-400 text-xs truncate">{r.client_email}</p>
                         </div>
                       </div>
                       <span className={`px-2.5 py-1 rounded-full text-xs font-medium shrink-0 ${s.cls}`}>
@@ -226,25 +226,25 @@ export default function Reservas() {
                     </div>
 
                     {/* Meta row */}
-                    <div className="flex items-center gap-4 text-xs text-gray-500 pt-2 border-t border-gray-100 flex-wrap">
+                    <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400 pt-2 border-t border-gray-100 dark:border-gray-700 flex-wrap">
                       <span className="flex items-center gap-1.5">
-                        <Users className="w-3.5 h-3.5 text-gray-400" />
+                        <Users className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
                         {r.people} persona{r.people !== 1 ? 's' : ''}
                       </span>
                       <span className="flex items-center gap-1.5">
-                        <LayoutGrid className="w-3.5 h-3.5 text-gray-400" />
+                        <LayoutGrid className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
                         {r.resources?.name || (r.resources?.number != null ? `${unitLabel(restaurant?.business_type, 'singular')} ${r.resources.number}` : `Sin ${unitLabel(restaurant?.business_type, 'singular').toLowerCase()}`)}
                       </span>
                       {r.client_phone && (
-                        <span className="text-gray-400">{r.client_phone}</span>
+                        <span className="text-gray-400 dark:text-gray-500">{r.client_phone}</span>
                       )}
                     </div>
 
                     {/* Nota */}
                     {r.notes && (
-                      <div className="flex items-start gap-2 px-3 py-2.5 bg-indigo-50 border border-indigo-100 rounded-xl">
-                        <MessageSquare className="w-3.5 h-3.5 text-indigo-500 shrink-0 mt-0.5" />
-                        <p className="text-xs text-indigo-700 leading-relaxed">{r.notes}</p>
+                      <div className="flex items-start gap-2 px-3 py-2.5 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 rounded-xl">
+                        <MessageSquare className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400 shrink-0 mt-0.5" />
+                        <p className="text-xs text-indigo-700 dark:text-indigo-400 leading-relaxed">{r.notes}</p>
                       </div>
                     )}
 
@@ -254,7 +254,7 @@ export default function Reservas() {
                         {r.status === 'confirmed' && (
                           <button
                             onClick={() => updateStatus(r.id, 'completed')}
-                            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-green-50 text-green-700 hover:bg-green-100 border border-green-100 transition-colors"
+                            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-500/20 border border-green-100 dark:border-green-500/20 transition-colors"
                           >
                             <CheckCheck className="w-3.5 h-3.5" />
                             Completar
@@ -262,7 +262,7 @@ export default function Reservas() {
                         )}
                         <button
                           onClick={() => updateStatus(r.id, 'cancelled')}
-                          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-red-50 text-red-700 hover:bg-red-100 border border-red-100 transition-colors"
+                          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20 border border-red-100 dark:border-red-500/20 transition-colors"
                         >
                           <X className="w-3.5 h-3.5" />
                           Cancelar
@@ -284,14 +284,14 @@ export default function Reservas() {
 
 function ActionButtons({ reservation, onUpdate }) {
   const { status, id } = reservation
-  if (status === 'cancelled') return <span className="text-gray-400 text-xs">—</span>
+  if (status === 'cancelled') return <span className="text-gray-400 dark:text-gray-500 text-xs">—</span>
 
   return (
     <div className="flex items-center justify-end gap-1.5">
       {status === 'confirmed' && (
         <button
           onClick={() => onUpdate(id, 'completed')}
-          className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-green-50 text-green-700 hover:bg-green-100 border border-green-100 transition-colors"
+          className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-500/20 border border-green-100 dark:border-green-500/20 transition-colors"
         >
           <CheckCheck className="w-3.5 h-3.5" />
           Completar
@@ -299,7 +299,7 @@ function ActionButtons({ reservation, onUpdate }) {
       )}
       <button
         onClick={() => onUpdate(id, 'cancelled')}
-        className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-red-50 text-red-700 hover:bg-red-100 border border-red-100 transition-colors"
+        className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20 border border-red-100 dark:border-red-500/20 transition-colors"
       >
         <X className="w-3.5 h-3.5" />
         Cancelar
@@ -313,13 +313,13 @@ function ActionButtons({ reservation, onUpdate }) {
 function EmptyState({ date, hasFilters }) {
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
-      <div className="w-14 h-14 rounded-2xl bg-gray-100 border border-gray-200 flex items-center justify-center mb-4">
-        <CalendarDays className="w-7 h-7 text-gray-300" />
+      <div className="w-14 h-14 rounded-2xl bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 flex items-center justify-center mb-4">
+        <CalendarDays className="w-7 h-7 text-gray-300 dark:text-gray-600" />
       </div>
-      <p className="text-gray-700 font-semibold text-sm">
+      <p className="text-gray-700 dark:text-gray-300 font-semibold text-sm">
         {hasFilters ? 'Sin resultados' : 'Sin reservas para este día'}
       </p>
-      <p className="text-gray-400 text-xs mt-1">
+      <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">
         {hasFilters ? 'Prueba cambiando los filtros.' : date}
       </p>
     </div>

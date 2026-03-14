@@ -222,6 +222,14 @@ export default function Configuracion() {
       showToast('error', 'Guarda primero la información general del restaurante')
       return
     }
+    if (openDays.length === 0) {
+      showToast('error', 'Selecciona al menos un día de apertura.')
+      return
+    }
+    if (closeTime <= openTime) {
+      showToast('error', 'El horario de cierre debe ser posterior al de apertura.')
+      return
+    }
     setSavingHours(true)
     try {
       const payload = {
@@ -268,12 +276,18 @@ export default function Configuracion() {
   // ── Tables CRUD ──
   async function addTable() {
     if (!newTableName.trim() || !restaurant) return
+    const range    = capacityRange(restaurant?.business_type)
+    const capacity = Number(newTableCapacity)
+    if (!capacity || capacity < range.min || capacity > range.max) {
+      showToast('error', `La capacidad debe estar entre ${range.min} y ${range.max} personas.`)
+      return
+    }
     const nextNumber = (tables.reduce((max, t) => Math.max(max, t.number ?? 0), 0)) + 1
     const { error } = await supabase.from('resources').insert({
       restaurant_id: restaurant.id,
       number:        nextNumber,
       name:          newTableName.trim(),
-      capacity:      newTableCapacity,
+      capacity,
       is_active:     true,
     })
     if (error) { showToast('error', error.message); return }
@@ -320,7 +334,7 @@ export default function Configuracion() {
   async function addBlockedDate() {
     if (!newBlockedDate) return
     if (newBlockedDate < format(new Date(), 'yyyy-MM-dd')) {
-      showToast('error', 'No podés bloquear fechas pasadas.')
+      showToast('error', 'No puedes bloquear fechas pasadas.')
       return
     }
     if (blockedDates.includes(newBlockedDate)) return
@@ -367,7 +381,7 @@ export default function Configuracion() {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
-          <span className="text-sm text-gray-400">Cargando configuración...</span>
+          <span className="text-sm text-gray-400 dark:text-gray-500">Cargando configuración...</span>
         </div>
       </div>
     )
@@ -381,12 +395,12 @@ export default function Configuracion() {
 
         {/* ── Page header ── */}
         <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Configuración</h2>
-          <p className="text-gray-500 text-sm mt-1">Ajusta los datos de tu restaurante.</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Configuración</h2>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Ajusta los datos de tu restaurante.</p>
         </div>
 
         {/* ── Tab navigation ── */}
-        <div className="flex gap-1 p-1 bg-white border border-gray-200 rounded-xl mb-8 shadow-sm">
+        <div className="flex gap-1 p-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl mb-8 shadow-sm">
           {TABS.map(({ id, label: defaultLabel, icon: Icon }) => {
             const label = id === 'mesas' ? unitLabel(restaurant?.business_type, 'plural') : defaultLabel
             return (
@@ -396,7 +410,7 @@ export default function Configuracion() {
               className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all flex-1 ${
                 activeTab === id
                   ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/20'
-                  : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}
             >
               <Icon className="w-4 h-4 shrink-0" />
@@ -414,8 +428,8 @@ export default function Configuracion() {
               {/* Logo */}
               <div>
                 <Label>Logo del restaurante</Label>
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-200">
-                  <div className="w-20 h-20 rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden shrink-0">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700">
+                  <div className="w-20 h-20 rounded-xl bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 flex items-center justify-center overflow-hidden shrink-0">
                     {logoPreview || restaurant?.logo_url ? (
                       <img
                         src={logoPreview ?? restaurant.logo_url}
@@ -423,15 +437,15 @@ export default function Configuracion() {
                         className="w-full h-full object-contain"
                       />
                     ) : (
-                      <ImagePlus className="w-7 h-7 text-gray-300" />
+                      <ImagePlus className="w-7 h-7 text-gray-300 dark:text-gray-600" />
                     )}
                   </div>
                   <div className="flex flex-col gap-2">
-                    <p className="text-sm text-gray-700 font-medium">
+                    <p className="text-sm text-gray-700 dark:text-gray-300 font-medium">
                       {restaurant?.name || 'Tu restaurante'}
                     </p>
                     <div className="flex items-center flex-wrap gap-2">
-                      <label className="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 text-gray-600 hover:bg-gray-100 text-xs font-medium rounded-lg transition-colors">
+                      <label className="cursor-pointer flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 text-xs font-medium rounded-lg transition-colors">
                         <ImagePlus className="w-3.5 h-3.5" />
                         {restaurant?.logo_url ? 'Cambiar logo' : 'Subir logo'}
                         <input
@@ -444,7 +458,7 @@ export default function Configuracion() {
                       {restaurant?.logo_url && !logoFile && (
                         <button
                           onClick={deleteLogo}
-                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-red-500 hover:bg-red-50 border border-red-100 rounded-lg transition-colors"
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 border border-red-100 dark:border-red-500/20 rounded-lg transition-colors"
                         >
                           <X className="w-3.5 h-3.5" />
                           Eliminar
@@ -463,7 +477,7 @@ export default function Configuracion() {
                         </button>
                         <button
                           onClick={() => { setLogoFile(null); setLogoPreview(null) }}
-                          className="px-3 py-1.5 text-xs text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg transition-colors"
+                          className="px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white border border-gray-200 dark:border-gray-600 rounded-lg transition-colors"
                         >
                           Cancelar
                         </button>
@@ -487,16 +501,16 @@ export default function Configuracion() {
               {/* Slug */}
               <div>
                 <Label>URL pública</Label>
-                <div className="flex items-center bg-white border border-gray-200 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500 transition-all">
-                  <span className="px-3 text-gray-400 text-sm border-r border-gray-200 py-2 select-none bg-gray-50">/r/</span>
+                <div className="flex items-center bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500 transition-all">
+                  <span className="px-3 text-gray-400 dark:text-gray-500 text-sm border-r border-gray-200 dark:border-gray-700 py-2 select-none bg-gray-50 dark:bg-gray-900">/r/</span>
                   <input
                     value={slug}
                     onChange={e => setSlug(e.target.value)}
                     placeholder="mi-restaurante"
-                    className="flex-1 bg-transparent px-3 py-2 text-sm text-gray-900 focus:outline-none"
+                    className="flex-1 bg-transparent px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none"
                   />
                 </div>
-                <p className="text-xs text-gray-400 mt-1.5">
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">
                   Tus clientes accederán a través de esta URL.
                 </p>
               </div>
@@ -557,14 +571,14 @@ export default function Configuracion() {
                       className={`px-3.5 h-10 rounded-lg text-sm font-medium transition-all ${
                         openDays.includes(value)
                           ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/25'
-                          : 'bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-900 border border-gray-200'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 hover:text-gray-900 dark:hover:text-white border border-gray-200 dark:border-gray-600'
                       }`}
                     >
                       {label}
                     </button>
                   ))}
                 </div>
-                <p className="text-xs text-gray-400 mt-2">
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
                   {openDays.length === 0
                     ? 'Ningún día seleccionado.'
                     : `${openDays.length} día${openDays.length === 1 ? '' : 's'} seleccionado${openDays.length === 1 ? '' : 's'}.`
@@ -573,17 +587,17 @@ export default function Configuracion() {
               </div>
 
               {/* Depósito anticipado */}
-              <div className="border border-gray-200 rounded-xl overflow-hidden">
-                <div className="flex items-center justify-between gap-3 px-4 py-3.5 bg-gray-50">
+              <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+                <div className="flex items-center justify-between gap-3 px-4 py-3.5 bg-gray-50 dark:bg-gray-900">
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-gray-900">Pago anticipado</p>
-                    <p className="text-xs text-gray-500 mt-0.5">¿Se requiere un depósito para confirmar la reserva?</p>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">Pago anticipado</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">¿Se requiere un depósito para confirmar la reserva?</p>
                   </div>
                   <button
                     type="button"
                     onClick={() => setRequiresDeposit(v => !v)}
                     className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
-                      requiresDeposit ? 'bg-indigo-500' : 'bg-gray-300'
+                      requiresDeposit ? 'bg-indigo-500' : 'bg-gray-300 dark:bg-gray-600'
                     }`}
                   >
                     <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
@@ -593,7 +607,7 @@ export default function Configuracion() {
                 </div>
 
                 {requiresDeposit && (
-                  <div className="px-4 py-4 space-y-3 border-t border-gray-100">
+                  <div className="px-4 py-4 space-y-3 border-t border-gray-100 dark:border-gray-700">
                     <Label>% del depósito</Label>
                     <div className="flex gap-2 flex-wrap">
                       {[10, 20, 25, 30, 50].map(p => (
@@ -604,30 +618,30 @@ export default function Configuracion() {
                           className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
                             depositPct === p
                               ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/20'
-                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border border-gray-200'
+                              : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600'
                           }`}
                         >
                           {p}%
                         </button>
                       ))}
                     </div>
-                    <p className="text-xs text-gray-400">El cliente verá este porcentaje antes de confirmar su reserva.</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">El cliente verá este porcentaje antes de confirmar su reserva.</p>
                   </div>
                 )}
               </div>
 
               {/* Política de pago personalizada */}
-              <div className="border border-gray-200 rounded-xl overflow-hidden">
-                <div className="flex items-center justify-between gap-3 px-4 py-3.5 bg-gray-50">
+              <div className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+                <div className="flex items-center justify-between gap-3 px-4 py-3.5 bg-gray-50 dark:bg-gray-900">
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-gray-900">Política de pago</p>
-                    <p className="text-xs text-gray-500 mt-0.5">Muestra un mensaje de pago personalizado en el email de confirmación.</p>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">Política de pago</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Muestra un mensaje de pago personalizado en el email de confirmación.</p>
                   </div>
                   <button
                     type="button"
                     onClick={() => setRequiresPrepayment(v => !v)}
                     className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
-                      requiresPrepayment ? 'bg-indigo-500' : 'bg-gray-300'
+                      requiresPrepayment ? 'bg-indigo-500' : 'bg-gray-300 dark:bg-gray-600'
                     }`}
                   >
                     <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
@@ -637,7 +651,7 @@ export default function Configuracion() {
                 </div>
 
                 {requiresPrepayment && (
-                  <div className="px-4 py-4 border-t border-gray-100 space-y-2">
+                  <div className="px-4 py-4 border-t border-gray-100 dark:border-gray-700 space-y-2">
                     <Label>Mensaje para el cliente</Label>
                     <textarea
                       value={prepaymentMessage}
@@ -647,7 +661,7 @@ export default function Configuracion() {
                       maxLength={300}
                       className="input w-full resize-none"
                     />
-                    <p className="text-right text-xs text-gray-400">{prepaymentMessage.length}/300</p>
+                    <p className="text-right text-xs text-gray-400 dark:text-gray-500">{prepaymentMessage.length}/300</p>
                   </div>
                 )}
               </div>
@@ -662,27 +676,27 @@ export default function Configuracion() {
           <Section title={unitLabel(restaurant?.business_type, 'plural')} icon={LayoutGrid}>
             <div className="space-y-6">
               {loadingTables ? (
-                <div className="flex items-center gap-2 text-gray-400 text-sm py-6">
+                <div className="flex items-center gap-2 text-gray-400 dark:text-gray-500 text-sm py-6">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   Cargando {unitLabel(restaurant?.business_type, 'plural').toLowerCase()}...
                 </div>
               ) : tables.length > 0 ? (
-                <div className="overflow-x-auto rounded-xl border border-gray-200">
+                <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
                   <table className="w-full text-sm min-w-[360px]">
                     <thead>
-                      <tr className="bg-gray-50 text-gray-500 text-xs uppercase tracking-wider border-b border-gray-100">
+                      <tr className="bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400 text-xs uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">
                         <th className="px-4 py-3 text-left">{unitLabel(restaurant?.business_type, 'singular')}</th>
                         <th className="px-4 py-3 text-left">Capacidad</th>
                         <th className="px-4 py-3 text-left">Estado</th>
                         <th className="px-4 py-3" />
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100 bg-white">
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-800">
                       {tables.map(t => (
-                        <tr key={t.id} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-4 py-3 text-gray-900 font-medium">{t.name || `${unitLabel(restaurant?.business_type, 'singular')} ${t.number}`}</td>
+                        <tr key={t.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                          <td className="px-4 py-3 text-gray-900 dark:text-white font-medium">{t.name || `${unitLabel(restaurant?.business_type, 'singular')} ${t.number}`}</td>
                           <td className="px-4 py-3">
-                            <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 text-xs border border-gray-200">
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-xs border border-gray-200 dark:border-gray-600">
                               {t.capacity} personas
                             </span>
                           </td>
@@ -691,8 +705,8 @@ export default function Configuracion() {
                               onClick={() => toggleTableActive(t)}
                               className={`text-xs px-2.5 py-1 rounded-full font-medium transition-colors border ${
                                 t.is_active
-                                  ? 'bg-green-50 text-green-700 border-green-100 hover:bg-green-100'
-                                  : 'bg-gray-100 text-gray-500 border-gray-200 hover:bg-gray-200'
+                                  ? 'bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400 border-green-100 dark:border-green-500/20 hover:bg-green-100 dark:hover:bg-green-500/20'
+                                  : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600'
                               }`}
                             >
                               {t.is_active ? 'Activa' : 'Inactiva'}
@@ -701,7 +715,7 @@ export default function Configuracion() {
                           <td className="px-4 py-3 text-right">
                             <button
                               onClick={() => deleteTable(t.id)}
-                              className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                              className="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -712,10 +726,10 @@ export default function Configuracion() {
                   </table>
                 </div>
               ) : (
-                <div className="text-center py-12 rounded-xl border-2 border-dashed border-gray-200">
-                  <LayoutGrid className="w-9 h-9 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500 text-sm font-medium">Sin {unitLabel(restaurant?.business_type, 'plural').toLowerCase()} configurados</p>
-                  <p className="text-gray-400 text-xs mt-1">Agrega {unitLabel(restaurant?.business_type, 'article')} para gestionar reservas.</p>
+                <div className="text-center py-12 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700">
+                  <LayoutGrid className="w-9 h-9 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                  <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">Sin {unitLabel(restaurant?.business_type, 'plural').toLowerCase()} configurados</p>
+                  <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">Agrega {unitLabel(restaurant?.business_type, 'article')} para gestionar reservas.</p>
                 </div>
               )}
 
@@ -728,7 +742,7 @@ export default function Configuracion() {
                       <div className="flex items-center justify-between mb-1.5">
                         <Label className="mb-0">Agregar {unitLabel(restaurant?.business_type, 'singular').toLowerCase()}</Label>
                         {!locked && (
-                          <span className="text-xs text-gray-400">Capacidad: {range.min}–{range.max} personas</span>
+                          <span className="text-xs text-gray-400 dark:text-gray-500">Capacidad: {range.min}–{range.max} personas</span>
                         )}
                       </div>
                       <div className="flex gap-2">
@@ -741,7 +755,7 @@ export default function Configuracion() {
                           className="input flex-1"
                         />
                         {locked ? (
-                          <div className="input flex-1 text-gray-400 flex items-center">
+                          <div className="input flex-1 text-gray-400 dark:text-gray-500 flex items-center">
                             {range.min} {range.min === 1 ? 'persona' : 'personas'}
                           </div>
                         ) : (
@@ -750,7 +764,17 @@ export default function Configuracion() {
                             value={newTableCapacity}
                             min={range.min}
                             max={range.max}
-                            onChange={e => setNewTableCapacity(Math.min(range.max, Math.max(range.min, Number(e.target.value))))}
+                            onChange={e => {
+                              const raw = e.target.value
+                              if (raw === '') { setNewTableCapacity(''); return }
+                              const num = parseInt(raw, 10)
+                              if (!isNaN(num)) setNewTableCapacity(Math.min(range.max, Math.max(range.min, num)))
+                            }}
+                            onBlur={() => {
+                              const n = Number(newTableCapacity)
+                              if (!n || n < range.min) setNewTableCapacity(range.min)
+                              else if (n > range.max) setNewTableCapacity(range.max)
+                            }}
                             placeholder="Cap."
                             className="input flex-1"
                           />
@@ -795,7 +819,7 @@ export default function Configuracion() {
                     Bloquear
                   </button>
                 </div>
-                <p className="text-xs text-gray-400 mt-1.5">
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5">
                   Los días bloqueados no estarán disponibles para nuevas reservas.
                 </p>
               </div>
@@ -807,20 +831,20 @@ export default function Configuracion() {
                     {blockedDates.map(d => (
                       <li
                         key={d}
-                        className="flex items-center justify-between bg-gray-50 border border-gray-100 rounded-xl px-4 py-3"
+                        className="flex items-center justify-between bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-xl px-4 py-3"
                       >
                         <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-8 h-8 rounded-lg bg-red-50 border border-red-100 flex items-center justify-center shrink-0">
-                            <CalendarX className="w-4 h-4 text-red-500" />
+                          <div className="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 flex items-center justify-center shrink-0">
+                            <CalendarX className="w-4 h-4 text-red-500 dark:text-red-400" />
                           </div>
-                          <span className="text-sm text-gray-700 capitalize truncate">
+                          <span className="text-sm text-gray-700 dark:text-gray-300 capitalize truncate">
                             {format(parseISO(d), "EEEE, d 'de' MMMM yyyy", { locale: es })}
                           </span>
                         </div>
                         <button
                           onClick={() => removeBlockedDate(d)}
                           disabled={savingBlocked}
-                          className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors disabled:opacity-40"
+                          className="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors disabled:opacity-40"
                         >
                           <X className="w-4 h-4" />
                         </button>
@@ -829,10 +853,10 @@ export default function Configuracion() {
                   </ul>
                 </div>
               ) : (
-                <div className="text-center py-12 rounded-xl border-2 border-dashed border-gray-200">
-                  <CalendarX className="w-9 h-9 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500 text-sm font-medium">Sin días bloqueados</p>
-                  <p className="text-gray-400 text-xs mt-1">Todos los días dentro del horario están disponibles.</p>
+                <div className="text-center py-12 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700">
+                  <CalendarX className="w-9 h-9 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                  <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">Sin días bloqueados</p>
+                  <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">Todos los días dentro del horario están disponibles.</p>
                 </div>
               )}
             </div>
@@ -848,12 +872,12 @@ export default function Configuracion() {
 
 function Section({ title, icon: Icon, children }) {
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
-      <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-100 bg-gray-50">
-        <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0">
-          <Icon className="w-4 h-4 text-indigo-600" />
+    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm">
+      <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+        <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 flex items-center justify-center shrink-0">
+          <Icon className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
         </div>
-        <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{title}</h3>
       </div>
       <div className="p-6">
         {children}
@@ -864,7 +888,7 @@ function Section({ title, icon: Icon, children }) {
 
 function Label({ children, className = '' }) {
   return (
-    <label className={`block text-xs font-medium text-gray-500 mb-2 ${className}`}>{children}</label>
+    <label className={`block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 ${className}`}>{children}</label>
   )
 }
 

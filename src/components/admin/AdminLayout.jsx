@@ -1,7 +1,8 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
-import { LayoutDashboard, CalendarDays, Settings, LogOut, UtensilsCrossed, BarChart2 } from 'lucide-react'
+import { LayoutDashboard, CalendarDays, Settings, LogOut, UtensilsCrossed, BarChart2, Sun, Moon } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import { useRestaurant } from '../../hooks/useRestaurant'
+import { useTheme } from '../../hooks/useTheme'
 
 const NAV_ITEMS = [
   { href: '/admin/dashboard',     icon: LayoutDashboard, label: 'Dashboard' },
@@ -14,6 +15,7 @@ export default function AdminLayout() {
   const location = useLocation()
   const navigate = useNavigate()
   const { restaurant } = useRestaurant()
+  const { dark, toggle } = useTheme()
 
   async function handleLogout() {
     await supabase.auth.signOut()
@@ -24,7 +26,7 @@ export default function AdminLayout() {
   const logoUrl        = restaurant?.logo_url ?? null
 
   return (
-    <div className="min-h-screen bg-slate-50 text-gray-900 flex">
+    <div className="min-h-screen bg-slate-50 dark:bg-gray-950 text-gray-900 dark:text-white flex">
 
       {/* ── Sidebar — desktop ── */}
       <aside className="hidden md:flex w-64 bg-gray-900 border-r border-gray-800 flex-col shrink-0">
@@ -87,8 +89,17 @@ export default function AdminLayout() {
           })}
         </nav>
 
-        {/* Logout */}
-        <div className="px-3 py-4 border-t border-gray-800">
+        {/* Theme toggle + Logout */}
+        <div className="px-3 py-4 border-t border-gray-800 space-y-0.5">
+          <button
+            onClick={toggle}
+            className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-400 hover:text-white hover:bg-gray-800/60 rounded-xl transition-all group"
+          >
+            <div className="w-7 h-7 rounded-lg bg-gray-800/80 flex items-center justify-center shrink-0">
+              {dark ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
+            </div>
+            {dark ? 'Modo claro' : 'Modo oscuro'}
+          </button>
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-3 px-3 py-2.5 text-sm text-gray-400 hover:text-red-400 hover:bg-red-400/10 rounded-xl transition-all group"
@@ -124,13 +135,22 @@ export default function AdminLayout() {
               <p className="text-[10px] text-gray-500 mt-0.5">Panel admin</p>
             </div>
           </div>
-          <button
-            onClick={handleLogout}
-            className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-colors rounded-xl shrink-0"
-            title="Cerrar sesión"
-          >
-            <LogOut className="w-[18px] h-[18px]" />
-          </button>
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              onClick={toggle}
+              className="p-2 text-gray-400 hover:text-white hover:bg-gray-800 transition-colors rounded-xl"
+              title={dark ? 'Modo claro' : 'Modo oscuro'}
+            >
+              {dark ? <Sun className="w-[18px] h-[18px]" /> : <Moon className="w-[18px] h-[18px]" />}
+            </button>
+            <button
+              onClick={handleLogout}
+              className="p-2 text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-colors rounded-xl"
+              title="Cerrar sesión"
+            >
+              <LogOut className="w-[18px] h-[18px]" />
+            </button>
+          </div>
         </header>
 
         {/* Page content */}

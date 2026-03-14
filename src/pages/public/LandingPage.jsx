@@ -12,19 +12,19 @@ const STEPS = [
     n: '1',
     icon: UserPlus,
     title: 'Crea tu cuenta y configura tu negocio',
-    desc: 'Elegí el tipo de negocio, definí tus horarios y agregá tus espacios disponibles. Todo en menos de 5 minutos.',
+    desc: 'Elige el tipo de negocio, define tus horarios y agrega tus espacios disponibles. Todo en menos de 5 minutos.',
   },
   {
     n: '2',
     icon: Share2,
-    title: 'Compartí tu link o QR con tus clientes',
-    desc: 'Recibís un link único: reservapp.space/r/tu-negocio. También podés imprimir tu QR y ponerlo en la entrada.',
+    title: 'Comparte tu link o QR con tus clientes',
+    desc: 'Recibe un link único: reservapp.space/r/tu-negocio. También puedes imprimir tu QR y ponerlo en la entrada.',
   },
   {
     n: '3',
     icon: Bell,
-    title: 'Los clientes reservan, vos recibís la notificación',
-    desc: 'El cliente completa la reserva en 3 pasos sin crear cuenta. Vos recibís un email con todos los datos.',
+    title: 'Los clientes reservan y tú recibes la notificación',
+    desc: 'El cliente completa la reserva en 3 pasos sin crear cuenta. Tú recibes un email con todos los datos.',
   },
 ]
 
@@ -41,21 +41,21 @@ const BENEFITS = [
     color: 'text-indigo-400',
     bg: 'bg-indigo-400/10 border-indigo-400/20',
     title: 'Emails automáticos',
-    desc: 'Confirmación al cliente y notificación a vos en cada reserva. Sin hacer nada.',
+    desc: 'Confirmación al cliente y notificación para ti en cada reserva. Sin hacer nada.',
   },
   {
     icon: CreditCard,
     color: 'text-amber-400',
     bg: 'bg-amber-400/10 border-amber-400/20',
     title: 'Pago anticipado configurable',
-    desc: 'Activá un porcentaje de depósito para asegurar las reservas de tus clientes.',
+    desc: 'Activa un porcentaje de depósito para asegurar las reservas de tus clientes.',
   },
   {
     icon: Smartphone,
     color: 'text-sky-400',
     bg: 'bg-sky-400/10 border-sky-400/20',
     title: 'Panel admin desde el celular',
-    desc: 'Gestioná tus reservas, horarios y recursos desde cualquier dispositivo.',
+    desc: 'Gestiona tus reservas, horarios y recursos desde cualquier dispositivo.',
   },
   {
     icon: Globe,
@@ -69,7 +69,7 @@ const BENEFITS = [
     color: 'text-yellow-400',
     bg: 'bg-yellow-400/10 border-yellow-400/20',
     title: 'Listo en 5 minutos',
-    desc: 'Sin conocimientos técnicos. Solo configurá tu negocio y empezá a recibir reservas.',
+    desc: 'Sin conocimientos técnicos. Solo configura tu negocio y empieza a recibir reservas.',
   },
 ]
 
@@ -87,7 +87,7 @@ const FOR_WHO = [
   {
     icon: '🚗',
     name: 'Lavaderos',
-    desc: 'Organiza turnos por bahía. Evitá aglomeraciones y tiempos de espera innecesarios.',
+    desc: 'Organiza turnos por bahía. Evita aglomeraciones y tiempos de espera innecesarios.',
   },
   {
     icon: '✂️',
@@ -97,12 +97,12 @@ const FOR_WHO = [
   {
     icon: '🏆',
     name: 'Canchas deportivas',
-    desc: 'Reservas por hora para fútbol, tenis, pádel y más. Controlá el aforo fácilmente.',
+    desc: 'Reservas por hora para fútbol, tenis, pádel y más. Controla el aforo fácilmente.',
   },
   {
     icon: '🏢',
     name: 'Consultorios',
-    desc: 'Gestioná tu agenda de citas de forma profesional. Sin llamadas, sin cruces de horarios.',
+    desc: 'Gestiona tu agenda de citas de forma profesional. Sin llamadas, sin cruces de horarios.',
   },
 ]
 
@@ -159,7 +159,7 @@ export default function LandingPage() {
 
           <p className="text-gray-400 text-base sm:text-lg max-w-xl mx-auto mb-8 leading-relaxed">
             Sin comisiones, sin complicaciones. Tus clientes reservan en 3 pasos,
-            tú te enfocás en atenderlos.
+            tú te enfocas en atenderlos.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -223,7 +223,7 @@ export default function LandingPage() {
               Funciona para cualquier negocio
             </h2>
             <p className="text-gray-500 text-sm sm:text-base max-w-md mx-auto">
-              Restaurantes, canchas, parqueaderos y más. Configurá tu tipo de negocio y listo.
+              Restaurantes, canchas, parqueaderos y más. Configura tu tipo de negocio y listo.
             </p>
           </div>
 
@@ -247,7 +247,7 @@ export default function LandingPage() {
         <div className="max-w-5xl mx-auto px-4">
           <div className="text-center mb-10">
             <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3">
-              Todo lo que necesitás
+              Todo lo que necesitas
             </h2>
             <p className="text-gray-500 text-sm sm:text-base">
               Sin tecnicismos. Sin configuraciones complicadas.
@@ -288,7 +288,7 @@ export default function LandingPage() {
                 Empieza gratis hoy
               </h2>
               <p className="text-gray-400 text-sm sm:text-base mb-8 max-w-sm mx-auto leading-relaxed">
-                Configura tu negocio en 5 minutos y empezá a recibir reservas hoy mismo.
+                Configura tu negocio en 5 minutos y empieza a recibir reservas hoy mismo.
               </p>
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3">

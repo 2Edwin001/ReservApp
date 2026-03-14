@@ -360,7 +360,7 @@ function CustomerForm({ restaurant, settings, date, time, businessType, onBack }
     setError('')
 
     if (!selectedTable) {
-      setError(`Seleccioná ${singLabel.toLowerCase()} para continuar.`)
+      setError(`Selecciona ${singLabel.toLowerCase()} para continuar.`)
       return
     }
 
@@ -379,7 +379,7 @@ function CustomerForm({ restaurant, settings, date, time, businessType, onBack }
         .neq('status', 'cancelled')
 
       if (recheck && recheck.length > 0) {
-        setError(`Esta ${singLabel.toLowerCase()} acaba de ser reservada. Por favor elegí otra.`)
+        setError(`Esta ${singLabel.toLowerCase()} acaba de ser reservada. Por favor, elige otra.`)
         // Refresh available list
         const [{ data: active }, { data: booked }] = await Promise.all([
           supabase.from('resources').select('id, name, number, capacity').eq('restaurant_id', restaurant.id).neq('is_active', false).order('number'),
@@ -399,7 +399,7 @@ function CustomerForm({ restaurant, settings, date, time, businessType, onBack }
         time:          timeStr,
         client_name:   form.name,
         client_email:  form.email,
-        people:        form.people,
+        people:        Number(form.people) || range.min,
         status:        'confirmed',
       }
       if (form.phone) payload.client_phone = form.phone
@@ -506,7 +506,17 @@ function CustomerForm({ restaurant, settings, date, time, businessType, onBack }
               min={range.min}
               max={range.max}
               value={form.people}
-              onChange={e => set('people', Math.min(range.max, Math.max(range.min, Number(e.target.value))))}
+              onChange={e => {
+                const raw = e.target.value
+                if (raw === '') { set('people', ''); return }
+                const num = parseInt(raw, 10)
+                if (!isNaN(num)) set('people', Math.min(range.max, Math.max(range.min, num)))
+              }}
+              onBlur={() => {
+                const n = Number(form.people)
+                if (!n || n < range.min) set('people', range.min)
+                else if (n > range.max) set('people', range.max)
+              }}
               className={inputClass}
             />
           )}
@@ -516,7 +526,7 @@ function CustomerForm({ restaurant, settings, date, time, businessType, onBack }
       {/* ── Resource selector ── */}
       <div>
         <label className="block text-xs font-semibold text-gray-600 mb-2 uppercase tracking-wide">
-          Elegí {singLabel.toLowerCase()} *
+          Elige {singLabel.toLowerCase()} *
         </label>
         {loadingTables ? (
           <div className="flex items-center gap-2 text-gray-400 text-sm py-3">
@@ -686,14 +696,14 @@ export default function ReservaPage() {
             )}
           </div>
           <h1 className="text-xl font-bold text-gray-900">{restaurant.name}</h1>
-          <p className="text-sm text-gray-400 mt-1">Reservá {unitLabel(restaurant.business_type, 'article')}</p>
+          <p className="text-sm text-gray-400 mt-1">Reserva {unitLabel(restaurant.business_type, 'article')}</p>
         </div>
 
         {/* Form area */}
         <div className="px-7 py-7">
           {!settings ? (
             <p className="text-center text-sm text-gray-400 py-6">
-              Este negocio aún no tiene su horario configurado.<br />Volvé más tarde.
+              Este negocio aún no tiene su horario configurado.<br />Vuelve más tarde.
             </p>
           ) : (
             <>

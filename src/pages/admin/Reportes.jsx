@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useRestaurant } from '../../hooks/useRestaurant'
+import { useTheme } from '../../hooks/useTheme'
 import { format, startOfMonth, endOfMonth, getDaysInMonth, subMonths, addMonths } from 'date-fns'
 import { es } from 'date-fns/locale'
 import {
@@ -25,6 +26,7 @@ export default function Reportes() {
   useEffect(() => { document.title = 'Reportes · ReservApp' }, [])
 
   const { restaurant, loading: restaurantLoading } = useRestaurant()
+  const { dark } = useTheme()
 
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
@@ -260,13 +262,18 @@ export default function Reportes() {
     }
   }
 
+  // Chart colors based on theme
+  const gridColor  = dark ? '#374151' : '#e5e7eb'
+  const cursorFill = dark ? '#1f2937' : '#f3f4f6'
+  const tickColor  = dark ? '#6b7280' : '#9ca3af'
+
   // ── Render ─────────────────────────────────────────────────────────────────
   if (restaurantLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
-          <span className="text-sm text-gray-400">Cargando...</span>
+          <span className="text-sm text-gray-400 dark:text-gray-500">Cargando...</span>
         </div>
       </div>
     )
@@ -278,8 +285,8 @@ export default function Reportes() {
       {/* ── Header ── */}
       <div className="flex items-start justify-between gap-4 mb-8">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Reportes</h2>
-          <p className="text-gray-500 text-sm mt-1">{restaurant?.name}</p>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Reportes</h2>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{restaurant?.name}</p>
         </div>
         <button
           onClick={exportPDF}
@@ -295,20 +302,20 @@ export default function Reportes() {
       </div>
 
       {/* ── Month selector ── */}
-      <div className="flex items-center gap-3 mb-8 bg-white border border-gray-200 rounded-2xl p-3 shadow-sm">
+      <div className="flex items-center gap-3 mb-8 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-3 shadow-sm">
         <button
           onClick={prevMonth}
-          className="p-2 rounded-xl bg-gray-50 border border-gray-200 text-gray-500 hover:text-gray-900 hover:border-gray-300 transition-all"
+          className="p-2 rounded-xl bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:border-gray-300 dark:hover:border-gray-500 transition-all"
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
         <div className="flex-1 text-center">
-          <span className="text-gray-900 font-semibold capitalize text-base">{monthLabel}</span>
+          <span className="text-gray-900 dark:text-white font-semibold capitalize text-base">{monthLabel}</span>
         </div>
         <button
           onClick={nextMonth}
           disabled={isCurrentMonth}
-          className="p-2 rounded-xl bg-gray-50 border border-gray-200 text-gray-500 hover:text-gray-900 hover:border-gray-300 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+          className="p-2 rounded-xl bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:border-gray-300 dark:hover:border-gray-500 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
         >
           <ChevronRight className="w-4 h-4" />
         </button>
@@ -318,7 +325,7 @@ export default function Reportes() {
       {loading ? (
         <div className="flex flex-col items-center gap-3 py-24">
           <Loader2 className="w-7 h-7 animate-spin text-indigo-500" />
-          <span className="text-sm text-gray-400">Cargando reporte...</span>
+          <span className="text-sm text-gray-400 dark:text-gray-500">Cargando reporte...</span>
         </div>
       ) : stats && (
         <div className="space-y-6">
@@ -353,10 +360,10 @@ export default function Reportes() {
           </div>
 
           {stats.total === 0 ? (
-            <div className="text-center py-16 rounded-xl border-2 border-dashed border-gray-200">
-              <BarChart2 className="w-9 h-9 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500 text-sm font-medium">Sin reservas en este mes</p>
-              <p className="text-gray-400 text-xs mt-1">Seleccioná otro mes o esperá nuevas reservas.</p>
+            <div className="text-center py-16 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700">
+              <BarChart2 className="w-9 h-9 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+              <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">Sin reservas en este mes</p>
+              <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">Selecciona otro mes o espera nuevas reservas.</p>
             </div>
           ) : (
             <>
@@ -364,19 +371,19 @@ export default function Reportes() {
               <ChartCard title="Reservas por día del mes" icon={BarChart2}>
                 <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={dailyChart} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
                     <XAxis
                       dataKey="dia"
-                      tick={{ fill: '#9ca3af', fontSize: 11 }}
+                      tick={{ fill: tickColor, fontSize: 11 }}
                       axisLine={false} tickLine={false}
                       interval={4}
                     />
                     <YAxis
-                      tick={{ fill: '#9ca3af', fontSize: 11 }}
+                      tick={{ fill: tickColor, fontSize: 11 }}
                       axisLine={false} tickLine={false}
                       allowDecimals={false}
                     />
-                    <Tooltip content={<CustomTooltip labelSuffix=" del mes" />} cursor={{ fill: '#f3f4f6' }} />
+                    <Tooltip content={<CustomTooltip labelSuffix=" del mes" dark={dark} />} cursor={{ fill: cursorFill }} />
                     <Bar dataKey="reservas" fill="#6366f1" radius={[4, 4, 0, 0]} maxBarSize={28} />
                   </BarChart>
                 </ResponsiveContainer>
@@ -387,18 +394,18 @@ export default function Reportes() {
                 <ChartCard title="Por día de la semana" icon={CalendarDays}>
                   <ResponsiveContainer width="100%" height={180}>
                     <BarChart data={dowChart} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                      <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
                       <XAxis
                         dataKey="label"
-                        tick={{ fill: '#9ca3af', fontSize: 11 }}
+                        tick={{ fill: tickColor, fontSize: 11 }}
                         axisLine={false} tickLine={false}
                       />
                       <YAxis
-                        tick={{ fill: '#9ca3af', fontSize: 11 }}
+                        tick={{ fill: tickColor, fontSize: 11 }}
                         axisLine={false} tickLine={false}
                         allowDecimals={false}
                       />
-                      <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f3f4f6' }} />
+                      <Tooltip content={<CustomTooltip dark={dark} />} cursor={{ fill: cursorFill }} />
                       <Bar dataKey="reservas" fill="#8b5cf6" radius={[4, 4, 0, 0]} maxBarSize={36} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -408,18 +415,18 @@ export default function Reportes() {
                   <ChartCard title="Franja horaria" icon={Clock}>
                     <ResponsiveContainer width="100%" height={180}>
                       <BarChart data={timeChart} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
+                        <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
                         <XAxis
                           dataKey="hora"
-                          tick={{ fill: '#9ca3af', fontSize: 11 }}
+                          tick={{ fill: tickColor, fontSize: 11 }}
                           axisLine={false} tickLine={false}
                         />
                         <YAxis
-                          tick={{ fill: '#9ca3af', fontSize: 11 }}
+                          tick={{ fill: tickColor, fontSize: 11 }}
                           axisLine={false} tickLine={false}
                           allowDecimals={false}
                         />
-                        <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f3f4f6' }} />
+                        <Tooltip content={<CustomTooltip dark={dark} />} cursor={{ fill: cursorFill }} />
                         <Bar dataKey="reservas" fill="#22c55e" radius={[4, 4, 0, 0]} maxBarSize={36} />
                       </BarChart>
                     </ResponsiveContainer>
@@ -437,10 +444,10 @@ export default function Reportes() {
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 const STAT_COLORS = {
-  indigo: { wrap: 'bg-indigo-50 border-indigo-100',  icon: 'text-indigo-600' },
-  purple: { wrap: 'bg-purple-50 border-purple-100',  icon: 'text-purple-600' },
-  green:  { wrap: 'bg-green-50  border-green-100',   icon: 'text-green-600'  },
-  gray:   { wrap: 'bg-gray-100  border-gray-200',    icon: 'text-gray-500'   },
+  indigo: { wrap: 'bg-indigo-50 border-indigo-100 dark:bg-indigo-500/10 dark:border-indigo-500/20', icon: 'text-indigo-600 dark:text-indigo-400' },
+  purple: { wrap: 'bg-purple-50 border-purple-100 dark:bg-purple-500/10 dark:border-purple-500/20', icon: 'text-purple-600 dark:text-purple-400' },
+  green:  { wrap: 'bg-green-50  border-green-100  dark:bg-green-500/10  dark:border-green-500/20',  icon: 'text-green-600  dark:text-green-400'  },
+  gray:   { wrap: 'bg-gray-100  border-gray-200   dark:bg-gray-700      dark:border-gray-600',       icon: 'text-gray-500   dark:text-gray-400'   },
 }
 
 function StatCard({ icon: Icon, label, value, prev, color = 'indigo' }) {
@@ -450,16 +457,16 @@ function StatCard({ icon: Icon, label, value, prev, color = 'indigo' }) {
   const pct  = diff !== null && prev > 0 ? Math.round((diff / prev) * 100) : null
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm">
+    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 shadow-sm">
       <div className="flex items-center gap-2 mb-3">
         <div className={`w-7 h-7 rounded-lg border flex items-center justify-center shrink-0 ${c.wrap}`}>
           <Icon className={`w-3.5 h-3.5 ${c.icon}`} />
         </div>
-        <p className="text-xs text-gray-500 font-medium leading-tight">{label}</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium leading-tight">{label}</p>
       </div>
-      <p className="text-2xl font-bold text-gray-900">{value}</p>
+      <p className="text-2xl font-bold text-gray-900 dark:text-white">{value}</p>
       {pct !== null && (
-        <p className={`text-xs mt-1.5 flex items-center gap-1 ${diff >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+        <p className={`text-xs mt-1.5 flex items-center gap-1 ${diff >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
           {diff >= 0
             ? <TrendingUp className="w-3 h-3" />
             : <TrendingDown className="w-3 h-3" />
@@ -468,7 +475,7 @@ function StatCard({ icon: Icon, label, value, prev, color = 'indigo' }) {
         </p>
       )}
       {diff !== null && prev === 0 && diff > 0 && (
-        <p className="text-xs mt-1.5 text-green-600">Primera actividad</p>
+        <p className="text-xs mt-1.5 text-green-600 dark:text-green-400">Primera actividad</p>
       )}
     </div>
   )
@@ -476,12 +483,12 @@ function StatCard({ icon: Icon, label, value, prev, color = 'indigo' }) {
 
 function ChartCard({ title, icon: Icon, children }) {
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
-      <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 bg-gray-50">
-        <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0">
-          <Icon className="w-4 h-4 text-indigo-600" />
+    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm">
+      <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+        <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 flex items-center justify-center shrink-0">
+          <Icon className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
         </div>
-        <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{title}</h3>
       </div>
       <div className="px-4 pt-6 pb-4">
         {children}
@@ -490,12 +497,16 @@ function ChartCard({ title, icon: Icon, children }) {
   )
 }
 
-function CustomTooltip({ active, payload, label, labelSuffix = '' }) {
+function CustomTooltip({ active, payload, label, labelSuffix = '', dark }) {
   if (!active || !payload?.length) return null
   return (
-    <div className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm shadow-lg">
-      <p className="text-gray-400 text-xs mb-0.5">{label}{labelSuffix}</p>
-      <p className="text-gray-900 font-semibold">{payload[0].value} reservas</p>
+    <div className={`border rounded-xl px-3 py-2 text-sm shadow-lg ${
+      dark
+        ? 'bg-gray-800 border-gray-700'
+        : 'bg-white border-gray-200'
+    }`}>
+      <p className={`text-xs mb-0.5 ${dark ? 'text-gray-400' : 'text-gray-400'}`}>{label}{labelSuffix}</p>
+      <p className={`font-semibold ${dark ? 'text-white' : 'text-gray-900'}`}>{payload[0].value} reservas</p>
     </div>
   )
 }
