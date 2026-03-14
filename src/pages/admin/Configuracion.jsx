@@ -553,8 +553,17 @@ export default function Configuracion() {
                   onChange={e => setSlotInterval(Number(e.target.value))}
                   className="input w-full"
                 >
-                  {[15, 30, 45, 60].map(v => (
-                    <option key={v} value={v}>{v} minutos</option>
+                  {[
+                    { value: 15,  label: '15 min' },
+                    { value: 30,  label: '30 min' },
+                    { value: 45,  label: '45 min' },
+                    { value: 60,  label: '1 hora' },
+                    { value: 90,  label: '1h 30 min' },
+                    { value: 120, label: '2 horas' },
+                    { value: 150, label: '2h 30 min' },
+                    { value: 180, label: '3 horas' },
+                  ].map(({ value, label }) => (
+                    <option key={value} value={value}>{label}</option>
                   ))}
                 </select>
               </div>

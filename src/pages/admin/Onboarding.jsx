@@ -269,18 +269,27 @@ export default function Onboarding() {
               <div>
                 <label className="block text-xs font-medium text-gray-400 mb-1.5 uppercase tracking-wider">Duración de cada turno</label>
                 <div className="grid grid-cols-4 gap-2">
-                  {[15, 30, 45, 60].map(v => (
+                  {[
+                    { value: 15,  label: '15 min' },
+                    { value: 30,  label: '30 min' },
+                    { value: 45,  label: '45 min' },
+                    { value: 60,  label: '1 hora' },
+                    { value: 90,  label: '1h 30m' },
+                    { value: 120, label: '2 horas' },
+                    { value: 150, label: '2h 30m' },
+                    { value: 180, label: '3 horas' },
+                  ].map(({ value, label }) => (
                     <button
-                      key={v}
+                      key={value}
                       type="button"
-                      onClick={() => setSlotInterval(v)}
+                      onClick={() => setSlotInterval(value)}
                       className={`py-2 rounded-xl text-sm font-medium transition-all ${
-                        slotInterval === v
+                        slotInterval === value
                           ? 'bg-indigo-500 text-white shadow-md shadow-indigo-500/20'
                           : 'bg-gray-800 text-gray-400 hover:bg-gray-700 border border-gray-700'
                       }`}
                     >
-                      {v} min
+                      {label}
                     </button>
                   ))}
                 </div>

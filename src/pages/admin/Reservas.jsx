@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useRestaurant } from '../../hooks/useRestaurant'
 import { Toast, useToast } from '../../components/admin/Toast'
-import { format } from 'date-fns'
-import { Search, CheckCheck, X, Loader2, CalendarDays, Users, LayoutGrid, MessageSquare } from 'lucide-react'
+import { format, addDays, startOfWeek, isSameDay } from 'date-fns'
+import { es } from 'date-fns/locale'
+import { Search, CheckCheck, X, Loader2, CalendarDays, Users, LayoutGrid, MessageSquare, ChevronLeft, ChevronRight } from 'lucide-react'
 import { unitLabel } from '../../lib/businessTypes'
 
 const STATUS = {
@@ -32,10 +33,33 @@ export default function Reservas() {
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [statusFilter, setStatusFilter] = useState('all')
   const [search, setSearch] = useState('')
+  const [viewMode, setViewMode] = useState('day')
+  const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
+  const [weekReservations, setWeekReservations] = useState([])
 
   useEffect(() => {
-    if (restaurant) loadReservations()
-  }, [restaurant, date])
+    if (restaurant && viewMode === 'day') loadReservations()
+  }, [restaurant, date, viewMode])
+
+  useEffect(() => {
+    if (restaurant && viewMode === 'week') loadWeekReservations()
+  }, [restaurant, weekStart, viewMode])
+
+  async function loadWeekReservations() {
+    setLoading(true)
+    const start = format(weekStart, 'yyyy-MM-dd')
+    const end   = format(addDays(weekStart, 6), 'yyyy-MM-dd')
+    const { data, error } = await supabase
+      .from('reservations')
+      .select('*, resources(name, number)')
+      .eq('restaurant_id', restaurant.id)
+      .gte('date', start)
+      .lte('date', end)
+      .order('date').order('time')
+    if (error) console.error('[Reservas week]', error)
+    setWeekReservations(data ?? [])
+    setLoading(false)
+  }
 
   async function loadReservations() {
     setLoading(true)
@@ -58,6 +82,7 @@ export default function Reservas() {
       .eq('id', id)
     if (error) { show('error', error.message); return }
     setReservations(prev => prev.map(r => r.id === id ? { ...r, status: newStatus } : r))
+    setWeekReservations(prev => prev.map(r => r.id === id ? { ...r, status: newStatus } : r))
     const msg = { confirmed: 'Reserva confirmada', completed: 'Reserva completada', cancelled: 'Reserva cancelada' }
     show('success', msg[newStatus] ?? 'Actualizado')
   }
@@ -92,27 +117,66 @@ export default function Reservas() {
         {/* ── Filters ── */}
         <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 mb-6 space-y-3 shadow-sm">
           <div className="flex flex-col sm:flex-row gap-3">
-            {/* Date */}
-            <div className="relative w-full sm:w-auto">
-              <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500 pointer-events-none" />
-              <input
-                type="date"
-                value={date}
-                onChange={e => setDate(e.target.value)}
-                className="input pl-9 w-full"
-              />
+            {/* View toggle */}
+            <div className="flex gap-1 bg-gray-100 dark:bg-gray-700 rounded-xl p-1 shrink-0">
+              {[{ value: 'day', label: 'Día' }, { value: 'week', label: 'Semana' }].map(v => (
+                <button
+                  key={v.value}
+                  onClick={() => setViewMode(v.value)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    viewMode === v.value
+                      ? 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm'
+                      : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  }`}
+                >
+                  {v.label}
+                </button>
+              ))}
             </div>
 
-            {/* Search */}
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500 pointer-events-none" />
-              <input
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="Buscar por nombre..."
-                className="input pl-9 w-full"
-              />
-            </div>
+            {/* Date (day) or Week navigator (week) */}
+            {viewMode === 'day' ? (
+              <div className="relative w-full sm:w-auto">
+                <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500 pointer-events-none" />
+                <input
+                  type="date"
+                  value={date}
+                  onChange={e => setDate(e.target.value)}
+                  className="input pl-9 w-full"
+                />
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setWeekStart(d => addDays(d, -7))}
+                  className="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                  {format(weekStart, "d MMM", { locale: es })} – {format(addDays(weekStart, 6), "d MMM yyyy", { locale: es })}
+                </span>
+                <button
+                  onClick={() => setWeekStart(d => addDays(d, 7))}
+                  className="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+
+            {/* Search (day mode only) */}
+            {viewMode === 'day' && (
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500 pointer-events-none" />
+                <input
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Buscar por nombre..."
+                  className="input pl-9 w-full"
+                />
+              </div>
+            )}
           </div>
 
           {/* Status filters */}
@@ -133,8 +197,103 @@ export default function Reservas() {
           </div>
         </div>
 
-        {/* ── Content ── */}
-        {loading ? (
+        {/* ── Week view ── */}
+        {viewMode === 'week' && (
+          loading ? (
+            <div className="flex flex-col items-center gap-3 py-20">
+              <Loader2 className="w-7 h-7 animate-spin text-indigo-500" />
+              <span className="text-sm text-gray-400 dark:text-gray-500">Cargando semana...</span>
+            </div>
+          ) : (
+            <div className="overflow-x-auto pb-2">
+              <div className="min-w-[700px] grid grid-cols-7 gap-2">
+                {Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)).map(day => {
+                  const dayStr  = format(day, 'yyyy-MM-dd')
+                  const isToday = isSameDay(day, new Date())
+                  const dayRes  = weekReservations
+                    .filter(r => r.date === dayStr)
+                    .filter(r => statusFilter === 'all' || r.status === statusFilter)
+                  return (
+                    <div key={dayStr}>
+                      {/* Day header */}
+                      <div className={`text-center py-2.5 rounded-xl mb-2 ${
+                        isToday
+                          ? 'bg-indigo-500'
+                          : 'bg-gray-100 dark:bg-gray-700/60'
+                      }`}>
+                        <p className={`text-[11px] font-medium capitalize ${isToday ? 'text-indigo-100' : 'text-gray-500 dark:text-gray-400'}`}>
+                          {format(day, 'EEE', { locale: es })}
+                        </p>
+                        <p className={`text-sm font-bold ${isToday ? 'text-white' : 'text-gray-900 dark:text-white'}`}>
+                          {format(day, 'd')}
+                        </p>
+                      </div>
+
+                      {/* Reservation cards */}
+                      <div className="space-y-1.5">
+                        {dayRes.length === 0 ? (
+                          <div className="h-16 flex items-center justify-center text-gray-300 dark:text-gray-700 text-xs border border-dashed border-gray-200 dark:border-gray-700 rounded-lg">
+                            —
+                          </div>
+                        ) : dayRes.map(r => {
+                          const s = STATUS[r.status] ?? STATUS.pending
+                          return (
+                            <div
+                              key={r.id}
+                              className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2 text-xs hover:border-gray-300 dark:hover:border-gray-600 transition-colors"
+                            >
+                              <div className="flex items-center justify-between gap-1 mb-1">
+                                <span className="font-bold tabular-nums text-gray-900 dark:text-white">
+                                  {r.time?.slice(0, 5)}
+                                </span>
+                                <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-medium ${s.cls}`}>
+                                  {s.label}
+                                </span>
+                              </div>
+                              <p className="text-gray-700 dark:text-gray-300 font-medium truncate">{r.client_name}</p>
+                              <p className="text-gray-400 dark:text-gray-500 mt-0.5">
+                                <Users className="w-3 h-3 inline mr-0.5" />{r.people}
+                              </p>
+                              {r.status !== 'cancelled' && r.status !== 'completed' && (
+                                <div className="flex gap-1 mt-1.5 pt-1.5 border-t border-gray-100 dark:border-gray-700">
+                                  {r.status === 'pending' && (
+                                    <button
+                                      onClick={() => updateStatus(r.id, 'confirmed')}
+                                      className="flex-1 py-1 rounded-md text-[10px] font-medium bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 border border-indigo-100 dark:border-indigo-500/20 transition-colors"
+                                    >
+                                      Confirmar
+                                    </button>
+                                  )}
+                                  {r.status === 'confirmed' && (
+                                    <button
+                                      onClick={() => updateStatus(r.id, 'completed')}
+                                      className="flex-1 py-1 rounded-md text-[10px] font-medium bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-500/20 border border-green-100 dark:border-green-500/20 transition-colors"
+                                    >
+                                      Completar
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={() => updateStatus(r.id, 'cancelled')}
+                                    className="flex-1 py-1 rounded-md text-[10px] font-medium bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20 border border-red-100 dark:border-red-500/20 transition-colors"
+                                  >
+                                    Cancelar
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        )}
+
+        {/* ── Day view content ── */}
+        {viewMode === 'day' && (loading ? (
           <div className="flex flex-col items-center gap-3 py-20">
             <Loader2 className="w-7 h-7 animate-spin text-indigo-500" />
             <span className="text-sm text-gray-400 dark:text-gray-500">Cargando reservas...</span>
@@ -286,7 +445,7 @@ export default function Reservas() {
               })}
             </div>
           </>
-        )}
+        ))}
       </div>
     </>
   )

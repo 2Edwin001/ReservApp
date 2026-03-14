@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useRestaurant } from '../../hooks/useRestaurant'
 import { useTheme } from '../../hooks/useTheme.jsx'
@@ -9,14 +9,16 @@ import {
 } from 'recharts'
 import {
   ChevronLeft, ChevronRight, Download, Loader2,
-  CalendarDays, Users, TrendingUp, TrendingDown, BarChart2, Clock,
+  CalendarDays, Users, TrendingUp, TrendingDown, BarChart2, Clock, ChevronDown,
 } from 'lucide-react'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import * as XLSX from 'xlsx'
 
 const DOW_LABELS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
 
 const STATUS_LABELS = {
+  pending:   'Pendiente',
   confirmed: 'Confirmada',
   completed: 'Completada',
   cancelled: 'Cancelada',
@@ -39,6 +41,17 @@ export default function Reportes() {
   const [dowChart, setDowChart] = useState([])
   const [timeChart, setTimeChart] = useState([])
   const [reservations, setReservations] = useState([])
+  const [showExportMenu, setShowExportMenu] = useState(false)
+  const exportMenuRef = useRef(null)
+
+  useEffect(() => {
+    if (!showExportMenu) return
+    function handleClick(e) {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target)) setShowExportMenu(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [showExportMenu])
 
   const currentDate = new Date(year, month, 1)
   const isCurrentMonth = year === now.getFullYear() && month === now.getMonth()
@@ -262,6 +275,81 @@ export default function Reportes() {
     }
   }
 
+  // ── CSV Export ──────────────────────────────────────────────────────────────
+  function exportCSV() {
+    const rows = [
+      ['Fecha', 'Hora', 'Cliente', 'Email', 'Teléfono', 'Personas', 'Estado'],
+      ...reservations.map(r => [
+        r.date,
+        r.time?.slice(0, 5) ?? '',
+        r.client_name,
+        r.client_email ?? '',
+        r.client_phone ?? '',
+        r.people,
+        STATUS_LABELS[r.status] ?? r.status,
+      ]),
+    ]
+    const csv = rows.map(row => row.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n')
+    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement('a')
+    a.href     = url
+    a.download = `reporte-${format(new Date(year, month, 1), 'yyyy-MM')}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  // ── Excel Export ────────────────────────────────────────────────────────────
+  function exportExcel() {
+    if (!stats) return
+    setExporting(true)
+    try {
+      const wb = XLSX.utils.book_new()
+
+      // Sheet 1: Resumen
+      const summaryData = [
+        ['Métrica', 'Valor'],
+        ['Reservas activas',       stats.total],
+        ['Completadas',            stats.completed],
+        ['Canceladas',             stats.cancelled],
+        ['Total comensales',       stats.totalGuests],
+        ['Tasa de cancelación',    `${stats.cancelRate}%`],
+        ['Mes anterior (activas)', stats.prevTotal],
+      ]
+      const wsSummary = XLSX.utils.aoa_to_sheet(summaryData)
+      wsSummary['!cols'] = [{ wch: 26 }, { wch: 12 }]
+      XLSX.utils.book_append_sheet(wb, wsSummary, 'Resumen')
+
+      // Sheet 2: Detalle reservas
+      const detailData = [
+        ['Fecha', 'Hora', 'Cliente', 'Email', 'Teléfono', 'Personas', 'Estado', 'Nota'],
+        ...reservations.map(r => [
+          r.date,
+          r.time?.slice(0, 5) ?? '',
+          r.client_name,
+          r.client_email ?? '',
+          r.client_phone ?? '',
+          r.people,
+          STATUS_LABELS[r.status] ?? r.status,
+          r.notes ?? '',
+        ]),
+      ]
+      const wsDetail = XLSX.utils.aoa_to_sheet(detailData)
+      wsDetail['!cols'] = [{ wch: 12 }, { wch: 8 }, { wch: 22 }, { wch: 26 }, { wch: 14 }, { wch: 10 }, { wch: 12 }, { wch: 30 }]
+      XLSX.utils.book_append_sheet(wb, wsDetail, 'Reservas')
+
+      // Sheet 3: Por día de la semana
+      const dowData = [['Día', 'Reservas'], ...dowChart.map(d => [d.label, d.reservas])]
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(dowData), 'Por día')
+
+      XLSX.writeFile(wb, `reporte-${format(new Date(year, month, 1), 'yyyy-MM')}.xlsx`)
+    } catch (err) {
+      console.error('[exportExcel]', err)
+    } finally {
+      setExporting(false)
+    }
+  }
+
   // Chart colors based on theme
   const gridColor  = dark ? '#374151' : '#e5e7eb'
   const cursorFill = dark ? '#1f2937' : '#f3f4f6'
@@ -288,17 +376,36 @@ export default function Reportes() {
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">Reportes</h2>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{restaurant?.name}</p>
         </div>
-        <button
-          onClick={exportPDF}
-          disabled={exporting || loading || !stats || stats.total === 0}
-          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-40 text-white text-sm font-medium rounded-xl transition-all shadow-lg shadow-indigo-500/20 shrink-0"
-        >
-          {exporting
-            ? <Loader2 className="w-4 h-4 animate-spin" />
-            : <Download className="w-4 h-4" />
-          }
-          <span className="hidden sm:inline">Exportar PDF</span>
-        </button>
+        <div className="relative shrink-0" ref={exportMenuRef}>
+          <button
+            onClick={() => setShowExportMenu(v => !v)}
+            disabled={exporting || loading || !stats || stats.total === 0}
+            className="flex items-center gap-2 px-4 py-2.5 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-40 text-white text-sm font-medium rounded-xl transition-all shadow-lg shadow-indigo-500/20"
+          >
+            {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            <span className="hidden sm:inline">Exportar</span>
+            <ChevronDown className="w-3.5 h-3.5" />
+          </button>
+
+          {showExportMenu && (
+            <div className="absolute right-0 top-full mt-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl z-20 overflow-hidden min-w-[140px]">
+              {[
+                { label: 'PDF',   fn: () => { exportPDF();   setShowExportMenu(false) } },
+                { label: 'CSV',   fn: () => { exportCSV();   setShowExportMenu(false) } },
+                { label: 'Excel', fn: () => { exportExcel(); setShowExportMenu(false) } },
+              ].map(({ label, fn }) => (
+                <button
+                  key={label}
+                  onClick={fn}
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-left"
+                >
+                  <Download className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500" />
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ── Month selector ── */}
