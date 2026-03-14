@@ -400,7 +400,7 @@ function CustomerForm({ restaurant, settings, date, time, businessType, onBack }
         client_name:   form.name,
         client_email:  form.email,
         people:        Number(form.people) || range.min,
-        status:        'confirmed',
+        status:        'pending',
       }
       if (form.phone) payload.client_phone = form.phone
       if (form.notes.trim()) payload.notes = form.notes.trim()

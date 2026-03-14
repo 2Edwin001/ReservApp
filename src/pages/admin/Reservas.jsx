@@ -7,6 +7,7 @@ import { Search, CheckCheck, X, Loader2, CalendarDays, Users, LayoutGrid, Messag
 import { unitLabel } from '../../lib/businessTypes'
 
 const STATUS = {
+  pending:   { label: 'Pendiente',  cls: 'bg-amber-50 text-amber-700 border border-amber-100 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20' },
   confirmed: { label: 'Confirmada', cls: 'bg-indigo-50 text-indigo-700 border border-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-400 dark:border-indigo-500/20' },
   completed: { label: 'Completada', cls: 'bg-green-50 text-green-700 border border-green-100 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20' },
   cancelled: { label: 'Cancelada',  cls: 'bg-red-50 text-red-700 border border-red-100 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20' },
@@ -14,6 +15,7 @@ const STATUS = {
 
 const STATUS_FILTERS = [
   { value: 'all',       label: 'Todas' },
+  { value: 'pending',   label: 'Pendientes' },
   { value: 'confirmed', label: 'Confirmadas' },
   { value: 'completed', label: 'Completadas' },
   { value: 'cancelled', label: 'Canceladas' },
@@ -56,7 +58,8 @@ export default function Reservas() {
       .eq('id', id)
     if (error) { show('error', error.message); return }
     setReservations(prev => prev.map(r => r.id === id ? { ...r, status: newStatus } : r))
-    show('success', newStatus === 'completed' ? 'Reserva completada' : 'Reserva cancelada')
+    const msg = { confirmed: 'Reserva confirmada', completed: 'Reserva completada', cancelled: 'Reserva cancelada' }
+    show('success', msg[newStatus] ?? 'Actualizado')
   }
 
   const filtered = reservations
@@ -113,7 +116,7 @@ export default function Reservas() {
           </div>
 
           {/* Status filters */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1 bg-gray-100 dark:bg-gray-700 rounded-xl p-1">
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-1 bg-gray-100 dark:bg-gray-700 rounded-xl p-1">
             {STATUS_FILTERS.map(f => (
               <button
                 key={f.value}
@@ -163,7 +166,7 @@ export default function Reservas() {
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-800">
                   {filtered.map(r => {
-                    const s = STATUS[r.status] ?? STATUS.confirmed
+                    const s = STATUS[r.status] ?? STATUS.pending
                     return (
                       <tr key={r.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                         <td className="px-4 py-3 text-gray-900 dark:text-white font-bold tabular-nums">
@@ -204,7 +207,7 @@ export default function Reservas() {
             {/* ── Mobile: cards ── */}
             <div className="md:hidden space-y-3">
               {filtered.map(r => {
-                const s = STATUS[r.status] ?? STATUS.confirmed
+                const s = STATUS[r.status] ?? STATUS.pending
                 return (
                   <div key={r.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 space-y-3 shadow-sm">
                     {/* Top row: time + name + status */}
@@ -249,8 +252,17 @@ export default function Reservas() {
                     )}
 
                     {/* Actions */}
-                    {r.status !== 'cancelled' && (
+                    {r.status !== 'cancelled' && r.status !== 'completed' && (
                       <div className="flex gap-2 pt-1">
+                        {r.status === 'pending' && (
+                          <button
+                            onClick={() => updateStatus(r.id, 'confirmed')}
+                            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 border border-indigo-100 dark:border-indigo-500/20 transition-colors"
+                          >
+                            <CheckCheck className="w-3.5 h-3.5" />
+                            Confirmar
+                          </button>
+                        )}
                         {r.status === 'confirmed' && (
                           <button
                             onClick={() => updateStatus(r.id, 'completed')}
@@ -284,10 +296,19 @@ export default function Reservas() {
 
 function ActionButtons({ reservation, onUpdate }) {
   const { status, id } = reservation
-  if (status === 'cancelled') return <span className="text-gray-400 dark:text-gray-500 text-xs">—</span>
+  if (status === 'cancelled' || status === 'completed') return <span className="text-gray-400 dark:text-gray-500 text-xs">—</span>
 
   return (
     <div className="flex items-center justify-end gap-1.5">
+      {status === 'pending' && (
+        <button
+          onClick={() => onUpdate(id, 'confirmed')}
+          className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 border border-indigo-100 dark:border-indigo-500/20 transition-colors"
+        >
+          <CheckCheck className="w-3.5 h-3.5" />
+          Confirmar
+        </button>
+      )}
       {status === 'confirmed' && (
         <button
           onClick={() => onUpdate(id, 'completed')}

@@ -8,6 +8,7 @@ import { Loader2, Copy, Check, ExternalLink, CalendarDays, TrendingUp, Clock, Li
 import { QRCodeCanvas } from 'qrcode.react'
 
 const STATUS_LABELS = {
+  pending:   { label: 'Pendiente',  cls: 'bg-amber-50 text-amber-700 border border-amber-100 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20' },
   confirmed: { label: 'Confirmada', cls: 'bg-indigo-50 text-indigo-700 border border-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-400 dark:border-indigo-500/20' },
   completed: { label: 'Completada', cls: 'bg-green-50 text-green-700 border border-green-100 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20' },
   cancelled: { label: 'Cancelada',  cls: 'bg-red-50 text-red-700 border border-red-100 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20' },
@@ -51,7 +52,7 @@ export default function Dashboard() {
         supabase.from('reservations').select('*', { count: 'exact', head: true })
           .eq('restaurant_id', restaurantId).gte('date', today).lte('date', nextWeek).neq('status', 'cancelled'),
         supabase.from('reservations').select('*', { count: 'exact', head: true })
-          .eq('restaurant_id', restaurantId).eq('status', 'confirmed').gte('date', today),
+          .eq('restaurant_id', restaurantId).eq('status', 'pending').gte('date', today),
         supabase.from('reservations').select('*')
           .eq('restaurant_id', restaurantId).eq('date', today).neq('status', 'cancelled').order('time').limit(10),
       ])
@@ -136,7 +137,7 @@ export default function Dashboard() {
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                   {todayReservations.map(r => {
-                    const s = STATUS_LABELS[r.status] ?? STATUS_LABELS.confirmed
+                    const s = STATUS_LABELS[r.status] ?? STATUS_LABELS.pending
                     return (
                       <tr key={r.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                         <td className="px-4 py-3 text-gray-900 dark:text-white font-bold tabular-nums">{r.time?.slice(0, 5)}</td>
