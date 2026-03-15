@@ -4,7 +4,7 @@ import { useRestaurant } from '../../hooks/useRestaurant'
 import { Toast, useToast } from '../../components/admin/Toast'
 import { format, addDays, startOfWeek, isSameDay } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { Search, CheckCheck, X, Loader2, CalendarDays, Users, LayoutGrid, MessageSquare, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Search, CheckCheck, X, Loader2, CalendarDays, Users, LayoutGrid, MessageSquare, ChevronLeft, ChevronRight, Phone, Mail, Clock } from 'lucide-react'
 import { unitLabel } from '../../lib/businessTypes'
 
 const STATUS = {
@@ -36,6 +36,7 @@ export default function Reservas() {
   const [viewMode, setViewMode] = useState('day')
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }))
   const [weekReservations, setWeekReservations] = useState([])
+  const [selectedReservation, setSelectedReservation] = useState(null)
 
   useEffect(() => {
     if (restaurant && viewMode === 'day') loadReservations()
@@ -83,6 +84,7 @@ export default function Reservas() {
     if (error) { show('error', error.message); return }
     setReservations(prev => prev.map(r => r.id === id ? { ...r, status: newStatus } : r))
     setWeekReservations(prev => prev.map(r => r.id === id ? { ...r, status: newStatus } : r))
+    setSelectedReservation(prev => prev?.id === id ? { ...prev, status: newStatus } : prev)
     const msg = { confirmed: 'Reserva confirmada', completed: 'Reserva completada', cancelled: 'Reserva cancelada' }
     show('success', msg[newStatus] ?? 'Actualizado')
   }
@@ -247,7 +249,8 @@ export default function Reservas() {
                             return (
                               <div
                                 key={r.id}
-                                className={`bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 border-l-[3px] ${borderCls} rounded-lg p-1.5 text-xs`}
+                                onClick={() => setSelectedReservation(r)}
+                                className={`bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 border-l-[3px] ${borderCls} rounded-lg p-1.5 text-xs cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors`}
                               >
                                 <p className="font-bold tabular-nums text-gray-900 dark:text-white text-[11px] leading-tight">
                                   {r.time?.slice(0, 5)}
@@ -452,7 +455,180 @@ export default function Reservas() {
           </>
         ))}
       </div>
+
+      {/* ── Reservation detail modal ── */}
+      {selectedReservation && (
+        <ReservationModal
+          reservation={selectedReservation}
+          restaurant={restaurant}
+          onUpdate={updateStatus}
+          onClose={() => setSelectedReservation(null)}
+        />
+      )}
     </>
+  )
+}
+
+// ─── Reservation modal ────────────────────────────────────────────────────────
+
+function ReservationModal({ reservation: r, restaurant, onUpdate, onClose }) {
+  const s = STATUS[r.status] ?? STATUS.pending
+
+  function handleUpdate(newStatus) {
+    onUpdate(r.id, newStatus)
+    if (newStatus === 'cancelled') onClose()
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      onClick={onClose}
+    >
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+
+      {/* Panel */}
+      <div
+        className="relative w-full sm:max-w-md bg-white dark:bg-gray-800 sm:rounded-2xl rounded-t-2xl shadow-2xl overflow-hidden"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 flex items-center justify-center">
+              <CalendarDays className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">Detalle de reserva</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500">#{r.id.slice(0, 8).toUpperCase()}</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="p-5 space-y-4">
+          {/* Status + date/time */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+              <Clock className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+              <span className="font-semibold">
+                {format(new Date(r.date + 'T12:00:00'), "d 'de' MMMM yyyy", { locale: es })}
+              </span>
+              <span className="text-gray-500 dark:text-gray-400 font-bold">{r.time?.slice(0, 5)}</span>
+            </div>
+            <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${s.cls}`}>
+              {s.label}
+            </span>
+          </div>
+
+          {/* Divider */}
+          <div className="border-t border-gray-100 dark:border-gray-700" />
+
+          {/* Client info */}
+          <div className="space-y-2.5">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-500/20 flex items-center justify-center text-sm font-bold text-indigo-600 dark:text-indigo-400 shrink-0">
+                {r.client_name?.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-900 dark:text-white">{r.client_name}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Cliente</p>
+              </div>
+            </div>
+
+            {r.client_email && (
+              <div className="flex items-center gap-2.5 text-sm text-gray-600 dark:text-gray-400">
+                <Mail className="w-4 h-4 text-gray-400 dark:text-gray-500 shrink-0" />
+                <a href={`mailto:${r.client_email}`} className="hover:text-indigo-500 transition-colors truncate">
+                  {r.client_email}
+                </a>
+              </div>
+            )}
+
+            {r.client_phone && (
+              <div className="flex items-center gap-2.5 text-sm text-gray-600 dark:text-gray-400">
+                <Phone className="w-4 h-4 text-gray-400 dark:text-gray-500 shrink-0" />
+                <a href={`tel:${r.client_phone}`} className="hover:text-indigo-500 transition-colors">
+                  {r.client_phone}
+                </a>
+              </div>
+            )}
+          </div>
+
+          {/* Divider */}
+          <div className="border-t border-gray-100 dark:border-gray-700" />
+
+          {/* Reservation details */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3">
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">Personas</p>
+              <div className="flex items-center gap-1.5">
+                <Users className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                <span className="text-sm font-semibold text-gray-900 dark:text-white">{r.people}</span>
+              </div>
+            </div>
+            <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-3">
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">
+                {unitLabel(restaurant?.business_type, 'singular')}
+              </p>
+              <div className="flex items-center gap-1.5">
+                <LayoutGrid className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                <span className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                  {r.resources?.name || (r.resources?.number != null
+                    ? `${unitLabel(restaurant?.business_type, 'singular')} ${r.resources.number}`
+                    : '—')}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Notes */}
+          {r.notes && (
+            <div className="flex items-start gap-2.5 bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-100 dark:border-indigo-500/20 rounded-xl px-4 py-3">
+              <MessageSquare className="w-4 h-4 text-indigo-500 dark:text-indigo-400 shrink-0 mt-0.5" />
+              <p className="text-sm text-indigo-700 dark:text-indigo-300 leading-relaxed">{r.notes}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Actions */}
+        {r.status !== 'cancelled' && r.status !== 'completed' && (
+          <div className="px-5 pb-5 flex gap-2">
+            {r.status === 'pending' && (
+              <button
+                onClick={() => handleUpdate('confirmed')}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-indigo-500 hover:bg-indigo-600 text-white transition-colors"
+              >
+                <CheckCheck className="w-4 h-4" />
+                Confirmar
+              </button>
+            )}
+            {r.status === 'confirmed' && (
+              <button
+                onClick={() => handleUpdate('completed')}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-green-500 hover:bg-green-600 text-white transition-colors"
+              >
+                <CheckCheck className="w-4 h-4" />
+                Completar
+              </button>
+            )}
+            <button
+              onClick={() => handleUpdate('cancelled')}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20 border border-red-100 dark:border-red-500/20 transition-colors"
+            >
+              <X className="w-4 h-4" />
+              Cancelar
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
   )
 }
 
